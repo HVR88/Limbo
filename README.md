@@ -6,11 +6,21 @@
 
 ## Introduction
 
-Limbo is a set of tools and data bridge for Lidarr. It also contains a MusicBrainz mirror server with fast, easy and automated installation. Limbo packages the Lidarr Metadata API and bridges queries to the MusicBrainz database, allowing 100% local access to all metadata. That means no issues with Lidarr online database schemas, pre-caching or other nonsense. Just FAST LAN-based performance.
+Limbo is a set of tools and data bridge for Lidarr. It also contains a MusicBrainz mirror server with fast, easy and automated installation.
 
-Limbo features its own WebUI, currently supporting media & format filtering for all releases. Maybe you don't want vinyl variations showing up in releases? No problem, filter that out. Maybe you want large media lists to be pruned to focus only on the top candidates - that's easy too. It also supports additional data providers not normally supported by Lidarr and allows you to fix/correct artwork downloading for those it already does.
+Limbo packages the Lidarr Metadata API and bridges queries to the MusicBrainz database, allowing 100% local access to all metadata. That means no online Lidarr database issues, pre-caching or other nonsense. Just FAST LAN-based performance.
 
-Release filtering if fully implemented and working solidly, as well as single, batch and whole Lidarr collection refreshing. Other features are currently in development or testing and will be added in upcoming versions. Update information is displayed at the bottom of the Limbo UI.
+_You say that you don't want vinyl formats in releases? No problem, filter that out._
+
+From the Limbo WebUI, you can filter/modify media formats for all releases, set up additional data providers (not normally supported by Lidarr) and fix artwork downloading for those it already does.
+
+Currently implemented features:
+
+- Release filtering
+- Release / Artist refreshing
+- Data providers with custom priorities (partial)
+
+Other features are currently in development or testing and will be added in upcoming versions. Update info & notification is displayed at the bottom of the Limbo WebUI.
 
 > [!TIP]
 >
