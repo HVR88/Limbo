@@ -6,7 +6,7 @@
 
 ## Introduction
 
-Limbo is a set of tools, including a download manager, for Lidarr. It contains a full MusicBrainz mirror server with fast, easy and automated installation. No plugins or settings need to be changed in Lidarr.
+Limbo is a multi-purpose tool and download manager for Lidarr. It contains a full MusicBrainz mirror server with fast, easy and automated installation. No plugins or settings need to be changed in Lidarr.
 
 Limbo packages the Lidarr Metadata API and bridges queries to the mirror database directly, providing local access to all metadata. No online Lidarr databases, "cache-warming" or other nonsense. Just fast LAN-based performance.
 

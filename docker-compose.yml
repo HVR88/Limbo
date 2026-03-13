@@ -1,11 +1,5 @@
 # Description: Deploy compose file with managed assets sync
 
-x-require-env: ${MUSICBRAINZ_REPLICATION_TOKEN}
-x-require-env-guard: ${MUSICBRAINZ_REPLICATION_TOKEN:?You need to set MUSICBRAINZ_REPLICATION_TOKEN in .env before starting.}
-x-require-env-guard-limbo-username: ${LIMBO_USERNAME:?You need to set LIMBO_USERNAME in .env before starting. This is a newer Limbo version; create a fresh .env from the latest example.env and re-apply your custom values.}
-x-require-env-guard-limbo-password: ${LIMBO_PASSWORD:?You need to set LIMBO_PASSWORD in .env before starting.}
-x-require-env-guard-slskd-share: ${LIMBO_SLSKD_PARENT_MOUNT:?You need to set LIMBO_SLSKD_PARENT_MOUNT to a host path in .env before starting.}
-
 x-assets-depends: &assets_depends
   assets:
     condition: service_completed_successfully
@@ -193,28 +187,30 @@ services:
     volumes:
       - slskd_data:/app
       - type: bind
-        source: ${LIMBO_SLSKD_PARENT_MOUNT:?Set LIMBO_SLSKD_PARENT_MOUNT to an existing absolute host path before starting slskd.}
+        source: ${LIMBO_SLSKD_PARENT_MOUNT:-/tmp/limbo_slskd_parent_mount}
         target: /music
         bind:
           create_host_path: false
       - type: bind
-        source: ${LIMBO_SLSKD_SHARING_MOUNT:-${LIMBO_SLSKD_PARENT_MOUNT:?Set LIMBO_SLSKD_PARENT_MOUNT to an existing absolute host path before starting slskd.}/shared_files}
+        source: ${LIMBO_SLSKD_SHARING_MOUNT:-${LIMBO_SLSKD_PARENT_MOUNT:-/tmp/limbo_slskd_parent_mount}/shared_files}
         target: /shared_files
         bind:
           create_host_path: true
       - type: bind
-        source: ${LIMBO_SLSKD_DOWNLOADS_MOUNT:-${LIMBO_SLSKD_PARENT_MOUNT:?Set LIMBO_SLSKD_PARENT_MOUNT to an existing absolute host path before starting slskd.}/slskd_downloads}
+        source: ${LIMBO_SLSKD_DOWNLOADS_MOUNT:-${LIMBO_SLSKD_PARENT_MOUNT:-/tmp/limbo_slskd_parent_mount}/slskd_downloads}
         target: /downloads
         bind:
           create_host_path: false
       - type: bind
-        source: ${LIMBO_SLSKD_INCOMPLETE_DOWNLOADS_MOUNT:-${LIMBO_SLSKD_DOWNLOADS_MOUNT:-${LIMBO_SLSKD_PARENT_MOUNT:?Set LIMBO_SLSKD_PARENT_MOUNT to an existing absolute host path before starting slskd.}/slskd_downloads}/slskd_incomplete}
+        source: ${LIMBO_SLSKD_INCOMPLETE_DOWNLOADS_MOUNT:-${LIMBO_SLSKD_DOWNLOADS_MOUNT:-${LIMBO_SLSKD_PARENT_MOUNT:-/tmp/limbo_slskd_parent_mount}/slskd_downloads}/slskd_incomplete}
         target: /incomplete
         bind:
           create_host_path: false
     restart: unless-stopped
     depends_on:
       <<: *assets_depends
+      preflight:
+        condition: service_completed_successfully
 
   bootstrap:
     image: ${MBMS_DOCKERHUB_NAMESPACE:-espressomatic}/${MBMS_DOCKERHUB_REPO_PREFIX:-limbo}-bootstrap:${LIMBO_CHANNEL:-latest}
