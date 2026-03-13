@@ -2,17 +2,25 @@
   <img src="https://raw.githubusercontent.com/HVR88/Limbo_DEV/main/assets/limbo-icon.png" alt="Limbo" width="400" />
 </p>
 
-# <p align="center">**_Limbo for Lidarr_**<br><sub>**Tools WebUI & Full Stack MusicBrainz Server**</sub></p>
+# <p align="center">**Limbo**<br><sub>**_Lidarr Tools & Full MusicBrainz Server_**</sub></p>
 
 ## Introduction
 
-Limbo is a set of tools and data bridge for Lidarr, It also contains a MusicBrainz mirror server featuring automated installation. Limbo packages the Lidarr Metadata API, and bridges queries to MusicBrainz database, allowing 100% local access to all metadata. That means no more issues with Lidarr database schemas, pre-caching or other nonsense. Just FAST LAN-based performance.
+Limbo is a set of tools and data bridge for Lidarr. It contains a MusicBrainz mirror server with fast, easy and automated installation.
 
-Limbo features its own WebUI, supporting filtering and manipulating media format data for all releases. Maybe you don't want vinyl variations showing up in releases? No problem, filter that out. Maybe you want large media lists to be pruned to focus only on the top candidates - that's easy too.
+Limbo packages the Lidarr Metadata API and bridges queries to the MusicBrainz database, providing local access to all metadata. No online Lidarr databases, "cache-warming" or other nonsense. Just fast LAN-based performance.
 
-> [!TIP]
->
-> When deploying from a terminal, use _screen_ or _tmux_ so the compose process can continue running if your session drops (closing the window, computer goes to sleep, etc.)
+_You say that you don't want vinyl formats in releases? No problem, filter that out._
+
+From the Limbo WebUI, you can filter/modify media formats for all releases, set up additional data providers (not normally supported by Lidarr) and fix artwork downloading for those it already supports.
+
+Currently implemented features:
+
+- Release filtering
+- Release / Artist refreshing
+- Data providers with custom priorities (partial)
+
+Other features are currently in development or testing. Update notifications are displayed at the bottom of the Limbo WebUI.
 
 <p align="center">
   <img src="https://github.com/HVR88/Docs-Extras/blob/master/Limbo-open-1.9.227.png?raw=true" alt="Limbo" width="600" />
@@ -27,10 +35,6 @@ Limbo features its own WebUI, supporting filtering and manipulating media format
 - MusicBrainz account and Data Feed access token
 
 ## Quick start
-
-> [!NOTE]
->
-> ### Migration from older versions, see instructions below
 
 ### 1. Register for MusicBrainz access & token
 
@@ -66,6 +70,10 @@ cp example.env .env
 Only `.env` is user-maintained. The stack refreshes managed files (admin scripts,
 compose template, and defaults) automatically when you update.
 
+> [!TIP]
+>
+> When deploying from a terminal, use _screen_ or _tmux_ so the compose process can continue running if your session drops (closing the window, computer goes to sleep, etc.)
+
 ### 4. Download containers, build DB & startup (!) This takes 2-4 hours
 
 ```
@@ -84,7 +92,7 @@ Or with less "noise:"
 
 ```
 docker compose logs -f --no-log-prefix --tail=200 \
-  bootstrap search-bootstrap search musicbrainz indexer indexer-cron limbo
+  bootstrap search-bootstrap search musicbrainz indexer indexer-cron limbo slskd
 
 ```
 
@@ -93,6 +101,8 @@ docker compose logs -f --no-log-prefix --tail=200 \
 When finished, the Limbo settings are available at **http://HOST_IP:5001**
 
 And the standard MusicBrainz webUI at **http://HOST_IP:5000**
+
+And slskd is available at **http://HOST_IP:5030** (HTTPS: `5031`)
 
 > [!TIP]
 >
@@ -110,70 +120,6 @@ docker compose up -d
 If a release updates `docker-compose.yml`, run `docker compose up -d` again
 after the first restart so the new compose file is applied.
 
-## Migration from previous MBMB_PLUS installs
-
-If you previously cloned the old repo, update your git remote once:
-
-1. `git remote set-url origin https://github.com/HVR88/Limbo`
-2. `git pull`
-
-If you were using zip downloads, replace your `docker-compose.yml` and
-`example.env` with the new release assets, then re-apply your `.env` settings.
-Example:
-
-```bash
-curl -fsSL -o limbo-latest.zip https://github.com/HVR88/Limbo/releases/latest/download/limbo-latest.zip
-unzip -o limbo-latest.zip
-```
-
-### Migrating project volumes (prefix and docker folder names)
-
-When MBMS*PLUS was originally installed, the folder name was used as the project name, which set up volumes with a `mbms_plus*`prefix. However, since the project update and new name, Compose looks for volumes with the new`limbo\_` prefix and will error out. To fix this, you can do one of the following two options:
-
-First, stop the running containers
-
-```
-docker compose stop
-```
-
-**Option 1:**
-**Keep using existing `mbms_plus` parent folder and volumes (easy and fast)**
-
-- Keep the folder name as `mbms_plus`
-- Set `COMPOSE_PROJECT_NAME=mbms_plus` in `.env`
-
-### - _OR_ -
-
-**Option 2:**
-**Migrate to new `limbo` volumes (recommended for new layout)**
-
-- Rename the docker folder to `limbo`:
-  ```bash
-  mv MBMS_PLUS limbo
-  ```
-- Replace `docker-compose.yml` and `example.env` with the new release assets, then re-apply your `.env` values.
-
-- Run the migration script included in the `admin/` folder as part of the zip or pull:
-
-  ```bash
-  admin/upgrade-volumes
-  ```
-
-  The name and size of each volume is displayed and you'll be prompted for confirmation before the migration starts.
-
-- Once finished, start the stack:
-  ```bash
-  docker compose up -d
-  ```
-
-The migration script copies data from `mbms_plus_*` to `limbo_*` volumes.
-
-After verifying everything works using the new volumes, the old ones can be removed:
-
-```bash
-admin/upgrade-volumes --cleanup
-```
-
 ## Limbo Configuration
 
 **WORK IN PROGRESS**
@@ -184,7 +130,7 @@ _**Use the SETTINGS button on the top right of the webUI to configure your Lidar
 
 ## Notes
 
-- _The first import and database setup will take multiple hours and requires up to 300GB of available storage_
+- _The first MusicBrainz import and database setup will take multiple hours and requires up to 300GB of available storage_
 - Building Materialized/denormalized tables consumes additional storage but offers significant performance improvements
 - 60GB of pre-built search indexes are downloaded to save a significant amount of time building new indexes
 - _Continued (scheduled) replication and indexing is required to keep the database up-to-date and at optimal performance_
