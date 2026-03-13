@@ -199,22 +199,22 @@ services:
     volumes:
       - slskd_data:/app
       - type: bind
-        source: ${LIMBO_SLSKD_PARENT_MOUNT:-/tmp/limbo_slskd_parent_mount}
+        source: ${LIMBO_SLSKD_PARENT_MOUNT}
         target: /music
         bind:
-          create_host_path: false
+          create_host_path: true
       - type: bind
-        source: ${LIMBO_SLSKD_SHARING_MOUNT:-${LIMBO_SLSKD_PARENT_MOUNT:-/tmp/limbo_slskd_parent_mount}/shared_files}
+        source: ${LIMBO_SLSKD_SHARING_MOUNT:-${LIMBO_SLSKD_PARENT_MOUNT}/shared_files}
         target: /shared_files
         bind:
           create_host_path: true
       - type: bind
-        source: ${LIMBO_SLSKD_DOWNLOADS_MOUNT:-${LIMBO_SLSKD_PARENT_MOUNT:-/tmp/limbo_slskd_parent_mount}/slskd_downloads}
+        source: ${LIMBO_SLSKD_DOWNLOADS_MOUNT:-${LIMBO_SLSKD_PARENT_MOUNT}/slskd_downloads}
         target: /downloads
         bind:
           create_host_path: true
       - type: bind
-        source: ${LIMBO_SLSKD_INCOMPLETE_DOWNLOADS_MOUNT:-${LIMBO_SLSKD_DOWNLOADS_MOUNT:-${LIMBO_SLSKD_PARENT_MOUNT:-/tmp/limbo_slskd_parent_mount}/slskd_downloads}/slskd_incomplete}
+        source: ${LIMBO_SLSKD_INCOMPLETE_DOWNLOADS_MOUNT:-${LIMBO_SLSKD_DOWNLOADS_MOUNT:-${LIMBO_SLSKD_PARENT_MOUNT}/slskd_downloads}/slskd_incomplete}
         target: /incomplete
         bind:
           create_host_path: true
