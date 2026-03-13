@@ -60,8 +60,22 @@ services:
           echo "Missing LIMBO_PASSWORD. Set it in .env before running docker compose up." >&2
           exit 1
         fi
+        echo "OK: replication token check passed."
+    env_file:
+      - ./.env
+    volumes:
+      - ./.env:/run/limbo.env:ro
+    restart: "no"
+    depends_on:
+      <<: *assets_depends
+
+  slskd-preflight:
+    image: alpine:3.20
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
         if [ -z "${LIMBO_SLSKD_PARENT_MOUNT:-}" ]; then
-          echo "Missing LIMBO_SLSKD_PARENT_MOUNT. Set it in .env to the host path you want slskd to share." >&2
+          echo "Missing LIMBO_SLSKD_PARENT_MOUNT. slskd will not start until it is set in .env." >&2
           exit 1
         fi
         case "${LIMBO_SLSKD_PARENT_MOUNT:-}" in
@@ -98,11 +112,9 @@ services:
               ;;
           esac
         fi
-        echo "OK: replication token check passed."
+        echo "OK: slskd mount checks passed."
     env_file:
       - ./.env
-    volumes:
-      - ./.env:/run/limbo.env:ro
     restart: "no"
     depends_on:
       <<: *assets_depends
@@ -209,7 +221,7 @@ services:
     restart: unless-stopped
     depends_on:
       <<: *assets_depends
-      preflight:
+      slskd-preflight:
         condition: service_completed_successfully
 
   bootstrap:
