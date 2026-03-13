@@ -45,7 +45,7 @@ services:
           exit 1
         fi
         missing_keys=""
-        for key in LIMBO_USERNAME LIMBO_PASSWORD LIMBO_SLSKD_PARENT_MOUNT SLSKD_SLSK_USERNAME SLSKD_SLSK_PASSWORD; do
+        for key in LIMBO_USERNAME LIMBO_PASSWORD LIMBO_SLSKD_PARENT_MOUNT; do
           if ! grep -Eq "^[[:space:]]*$${key}=" /run/limbo.env; then
             missing_keys="$${missing_keys} $${key}"
           fi
@@ -159,7 +159,7 @@ services:
       <<: *assets_depends
 
   slskd:
-    image: slskd/slskd:latest
+    image: ${MBMS_DOCKERHUB_NAMESPACE:-espressomatic}/${MBMS_DOCKERHUB_REPO_PREFIX:-limbo}-slskd:${LIMBO_CHANNEL:-latest}
     pull_policy: always
     logging:
       driver: "json-file"
@@ -179,8 +179,6 @@ services:
       - SLSKD_APIKEY=${LIMBO_APIKEY:-}
       - SLSKD_DOWNLOADS_DIR=/downloads
       - SLSKD_INCOMPLETE_DIR=/incomplete
-      - SLSKD_SLSK_USERNAME=${SLSKD_SLSK_USERNAME:-}
-      - SLSKD_SLSK_PASSWORD=${SLSKD_SLSK_PASSWORD:-}
     volumes:
       - slskd_data:/app
       - type: bind
