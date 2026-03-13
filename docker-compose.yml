@@ -1,3 +1,4 @@
+#   Limbo 1.9.313.213
 # Description: Deploy compose file with managed assets sync
 
 x-assets-depends: &assets_depends
@@ -33,90 +34,23 @@ services:
 
   preflight:
     image: alpine:3.20
-    entrypoint: ["/bin/sh", "-c"]
-    command:
-      - |
-        if [ -z "${MUSICBRAINZ_REPLICATION_TOKEN:-}" ]; then
-          echo "Missing MUSICBRAINZ_REPLICATION_TOKEN. Set it in .env before running docker compose up." >&2
-          exit 1
-        fi
-        missing_keys=""
-        for key in LIMBO_USERNAME LIMBO_PASSWORD LIMBO_SLSKD_PARENT_MOUNT; do
-          if ! grep -Eq "^[[:space:]]*$${key}=" /run/limbo.env; then
-            missing_keys="$${missing_keys} $${key}"
-          fi
-        done
-        if [ -n "$${missing_keys}" ]; then
-          echo "WARNING: Detected an older .env template with missing keys."
-          echo "WARNING: Missing keys:$${missing_keys}"
-          echo "WARNING: You are running a newer Limbo version with an older .env file."
-          echo "WARNING: Update your .env by merging from the latest example.env."
-        fi
-        if [ -z "${LIMBO_USERNAME:-}" ]; then
-          echo "Missing LIMBO_USERNAME. Set it in .env before running docker compose up." >&2
-          exit 1
-        fi
-        if [ -z "${LIMBO_PASSWORD:-}" ]; then
-          echo "Missing LIMBO_PASSWORD. Set it in .env before running docker compose up." >&2
-          exit 1
-        fi
-        echo "OK: replication token check passed."
+    entrypoint: ["/bin/sh", "/opt/limbo-preflight/core-env.sh"]
     env_file:
       - ./.env
     volumes:
       - ./.env:/run/limbo.env:ro
+      - ./admin/preflight:/opt/limbo-preflight:ro
     restart: "no"
     depends_on:
       <<: *assets_depends
 
   slskd-preflight:
     image: alpine:3.20
-    entrypoint: ["/bin/sh", "-c"]
-    command:
-      - |
-        if [ -z "${LIMBO_SLSKD_PARENT_MOUNT:-}" ]; then
-          echo "ERROR: SLSKD_DISABLED_MISSING_PARENT_MOUNT" >&2
-          echo "ERROR: LIMBO_SLSKD_PARENT_MOUNT is empty. slskd will not start." >&2
-          echo "ERROR: Set LIMBO_SLSKD_PARENT_MOUNT to an absolute host path in .env and run docker compose up -d again." >&2
-          exit 1
-        fi
-        case "${LIMBO_SLSKD_PARENT_MOUNT:-}" in
-          /*) ;;
-          *)
-            echo "LIMBO_SLSKD_PARENT_MOUNT must be an absolute host path (example: /mnt/media/music)." >&2
-            exit 1
-            ;;
-        esac
-        if [ -n "${LIMBO_SLSKD_DOWNLOADS_MOUNT:-}" ]; then
-          case "${LIMBO_SLSKD_DOWNLOADS_MOUNT:-}" in
-            /*) ;;
-            *)
-              echo "LIMBO_SLSKD_DOWNLOADS_MOUNT must be an absolute host path when set." >&2
-              exit 1
-              ;;
-          esac
-        fi
-        if [ -n "${LIMBO_SLSKD_SHARING_MOUNT:-}" ]; then
-          case "${LIMBO_SLSKD_SHARING_MOUNT:-}" in
-            /*) ;;
-            *)
-              echo "LIMBO_SLSKD_SHARING_MOUNT must be an absolute host path when set." >&2
-              exit 1
-              ;;
-          esac
-        fi
-        if [ -n "${LIMBO_SLSKD_INCOMPLETE_DOWNLOADS_MOUNT:-}" ]; then
-          case "${LIMBO_SLSKD_INCOMPLETE_DOWNLOADS_MOUNT:-}" in
-            /*) ;;
-            *)
-              echo "LIMBO_SLSKD_INCOMPLETE_DOWNLOADS_MOUNT must be an absolute host path when set." >&2
-              exit 1
-              ;;
-          esac
-        fi
-        echo "OK: slskd mount checks passed."
+    entrypoint: ["/bin/sh", "/opt/limbo-preflight/slskd-mounts.sh"]
     env_file:
       - ./.env
+    volumes:
+      - ./admin/preflight:/opt/limbo-preflight:ro
     restart: "no"
     depends_on:
       <<: *assets_depends
