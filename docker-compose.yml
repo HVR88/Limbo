@@ -31,6 +31,8 @@ services:
   assets:
     image: ${MBMS_DOCKERHUB_NAMESPACE:-espressomatic}/${MBMS_DOCKERHUB_REPO_PREFIX:-limbo}-assets:${LIMBO_CHANNEL:-latest}
     pull_policy: always
+    environment:
+      - MBMS_ASSETS_FORCE_SYNC=${MBMS_ASSETS_FORCE_SYNC:-1}
     volumes:
       - ./:/out
     restart: "no"
