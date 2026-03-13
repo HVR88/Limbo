@@ -23,10 +23,10 @@ volumes:
 
 services:
   assets:
-    image: ${MBMS_DOCKERHUB_NAMESPACE:-espressomatic}/${MBMS_DOCKERHUB_REPO_PREFIX:-limbo}-assets:${LIMBO_CHANNEL:-latest}
+    image: ${LIMBO_DOCKERHUB_NAMESPACE:-${MBMS_DOCKERHUB_NAMESPACE:-espressomatic}}/${LIMBO_DOCKERHUB_REPO_PREFIX:-${MBMS_DOCKERHUB_REPO_PREFIX:-limbo}}-assets:${LIMBO_CHANNEL:-latest}
     pull_policy: always
     environment:
-      - MBMS_ASSETS_FORCE_SYNC=${MBMS_ASSETS_FORCE_SYNC:-1}
+      - LIMBO_ASSETS_FORCE_SYNC=${LIMBO_ASSETS_FORCE_SYNC:-1}
     volumes:
       - ./:/out
     restart: "no"
@@ -122,7 +122,7 @@ services:
       <<: *assets_depends
 
   db:
-    image: ${MBMS_DOCKERHUB_NAMESPACE:-espressomatic}/${MBMS_DOCKERHUB_REPO_PREFIX:-limbo}-db:${LIMBO_CHANNEL:-latest}
+    image: ${LIMBO_DOCKERHUB_NAMESPACE:-${MBMS_DOCKERHUB_NAMESPACE:-espressomatic}}/${LIMBO_DOCKERHUB_REPO_PREFIX:-${MBMS_DOCKERHUB_REPO_PREFIX:-limbo}}-db:${LIMBO_CHANNEL:-latest}
     logging:
       driver: "json-file"
       options:
@@ -143,7 +143,7 @@ services:
       <<: *assets_depends
 
   mq:
-    image: ${MBMS_DOCKERHUB_NAMESPACE:-espressomatic}/${MBMS_DOCKERHUB_REPO_PREFIX:-limbo}-mq:${LIMBO_CHANNEL:-latest}
+    image: ${LIMBO_DOCKERHUB_NAMESPACE:-${MBMS_DOCKERHUB_NAMESPACE:-espressomatic}}/${LIMBO_DOCKERHUB_REPO_PREFIX:-${MBMS_DOCKERHUB_REPO_PREFIX:-limbo}}-mq:${LIMBO_CHANNEL:-latest}
     hostname: "mq"
     logging:
       driver: "json-file"
@@ -178,7 +178,7 @@ services:
       <<: *assets_depends
 
   slskd:
-    image: ${MBMS_DOCKERHUB_NAMESPACE:-espressomatic}/${MBMS_DOCKERHUB_REPO_PREFIX:-limbo}-slskd:${LIMBO_CHANNEL:-latest}
+    image: ${LIMBO_DOCKERHUB_NAMESPACE:-${MBMS_DOCKERHUB_NAMESPACE:-espressomatic}}/${LIMBO_DOCKERHUB_REPO_PREFIX:-${MBMS_DOCKERHUB_REPO_PREFIX:-limbo}}-slskd:${LIMBO_CHANNEL:-latest}
     pull_policy: always
     logging:
       driver: "json-file"
@@ -228,7 +228,7 @@ services:
         required: false
 
   bootstrap:
-    image: ${MBMS_DOCKERHUB_NAMESPACE:-espressomatic}/${MBMS_DOCKERHUB_REPO_PREFIX:-limbo}-bootstrap:${LIMBO_CHANNEL:-latest}
+    image: ${LIMBO_DOCKERHUB_NAMESPACE:-${MBMS_DOCKERHUB_NAMESPACE:-espressomatic}}/${LIMBO_DOCKERHUB_REPO_PREFIX:-${MBMS_DOCKERHUB_REPO_PREFIX:-limbo}}-bootstrap:${LIMBO_CHANNEL:-latest}
     environment:
       - TZ=${TZ:-America/Toronto}
       - POSTGRES_USER=${MB_DB_USER:-musicbrainz}
@@ -252,7 +252,7 @@ services:
         condition: service_started
 
   search-bootstrap:
-    image: ${MBMS_DOCKERHUB_NAMESPACE:-espressomatic}/${MBMS_DOCKERHUB_REPO_PREFIX:-limbo}-search:${LIMBO_CHANNEL:-latest}
+    image: ${LIMBO_DOCKERHUB_NAMESPACE:-${MBMS_DOCKERHUB_NAMESPACE:-espressomatic}}/${LIMBO_DOCKERHUB_REPO_PREFIX:-${MBMS_DOCKERHUB_REPO_PREFIX:-limbo}}-search:${LIMBO_CHANNEL:-latest}
     entrypoint: ["/usr/local/bin/bootstrap-indexes.sh"]
     environment:
       - TZ=${TZ:-America/Toronto}
@@ -277,7 +277,7 @@ services:
         condition: service_completed_successfully
 
   search:
-    image: ${MBMS_DOCKERHUB_NAMESPACE:-espressomatic}/${MBMS_DOCKERHUB_REPO_PREFIX:-limbo}-search:${LIMBO_CHANNEL:-latest}
+    image: ${LIMBO_DOCKERHUB_NAMESPACE:-${MBMS_DOCKERHUB_NAMESPACE:-espressomatic}}/${LIMBO_DOCKERHUB_REPO_PREFIX:-${MBMS_DOCKERHUB_REPO_PREFIX:-limbo}}-search:${LIMBO_CHANNEL:-latest}
     logging:
       driver: "json-file"
       options:
@@ -303,7 +303,7 @@ services:
         condition: service_completed_successfully
 
   musicbrainz:
-    image: ${MBMS_DOCKERHUB_NAMESPACE:-espressomatic}/${MBMS_DOCKERHUB_REPO_PREFIX:-limbo}-musicbrainz:${LIMBO_CHANNEL:-latest}
+    image: ${LIMBO_DOCKERHUB_NAMESPACE:-${MBMS_DOCKERHUB_NAMESPACE:-espressomatic}}/${LIMBO_DOCKERHUB_REPO_PREFIX:-${MBMS_DOCKERHUB_REPO_PREFIX:-limbo}}-musicbrainz:${LIMBO_CHANNEL:-latest}
     logging:
       driver: "json-file"
       options:
@@ -360,7 +360,7 @@ services:
         condition: service_completed_successfully
 
   indexer:
-    image: ${MBMS_DOCKERHUB_NAMESPACE:-espressomatic}/${MBMS_DOCKERHUB_REPO_PREFIX:-limbo}-indexer:${LIMBO_CHANNEL:-latest}
+    image: ${LIMBO_DOCKERHUB_NAMESPACE:-${MBMS_DOCKERHUB_NAMESPACE:-espressomatic}}/${LIMBO_DOCKERHUB_REPO_PREFIX:-${MBMS_DOCKERHUB_REPO_PREFIX:-limbo}}-indexer:${LIMBO_CHANNEL:-latest}
     environment:
       - TZ=${TZ:-America/Toronto}
       - POSTGRES_USER=${MB_DB_USER:-musicbrainz}
@@ -380,7 +380,7 @@ services:
         condition: service_started
 
   indexer-cron:
-    image: ${MBMS_DOCKERHUB_NAMESPACE:-espressomatic}/${MBMS_DOCKERHUB_REPO_PREFIX:-limbo}-indexer:${LIMBO_CHANNEL:-latest}
+    image: ${LIMBO_DOCKERHUB_NAMESPACE:-${MBMS_DOCKERHUB_NAMESPACE:-espressomatic}}/${LIMBO_DOCKERHUB_REPO_PREFIX:-${MBMS_DOCKERHUB_REPO_PREFIX:-limbo}}-indexer:${LIMBO_CHANNEL:-latest}
     environment:
       - TZ=${TZ:-America/Toronto}
       - POSTGRES_USER=${MB_DB_USER:-musicbrainz}
@@ -430,7 +430,7 @@ services:
       - "${LIMBO_PORT:-5001}:5001"
     volumes:
       - limbo_bridge_init_state:/metadata/init-state
-      - ./.mbms/assets/MBMS_TAG_VERSION:/mbms/VERSION:ro
+      - ./.limbo/assets/LIMBO_TAG_VERSION:/limbo/VERSION:ro
     env_file:
       - .env
     environment:
@@ -442,9 +442,12 @@ services:
       USE_CACHE: "${USE_CACHE:-true}"
       ENABLE_STATS: "${ENABLE_STATS:-false}"
       ROOT_PATH: "${ROOT_PATH:-}"
-      MBMS_PLUS_VERSION_FILE: "/mbms/VERSION"
-      MBMS_REPLICATION_SCHEDULE: "${MBMS_REPLICATION_SCHEDULE:-}"
-      MBMS_INDEX_SCHEDULE: "${MBMS_INDEX_SCHEDULE:-}"
+      LIMBO_VERSION_FILE: "/limbo/VERSION"
+      MBMS_PLUS_VERSION_FILE: "/limbo/VERSION"
+      LIMBO_REPLICATION_SCHEDULE: "${LIMBO_REPLICATION_SCHEDULE:-${MBMS_REPLICATION_SCHEDULE:-}}"
+      MBMS_REPLICATION_SCHEDULE: "${LIMBO_REPLICATION_SCHEDULE:-${MBMS_REPLICATION_SCHEDULE:-}}"
+      LIMBO_INDEX_SCHEDULE: "${LIMBO_INDEX_SCHEDULE:-${MBMS_INDEX_SCHEDULE:-}}"
+      MBMS_INDEX_SCHEDULE: "${LIMBO_INDEX_SCHEDULE:-${MBMS_INDEX_SCHEDULE:-}}"
       MUSICBRAINZ_REPLICATION_ENABLED: "${MUSICBRAINZ_REPLICATION_ENABLED:-0}"
       MUSICBRAINZ_REPLICATION_SCHEDULE: "${MUSICBRAINZ_REPLICATION_SCHEDULE:-}"
       MUSICBRAINZ_REPLICATION_TIME: "${MUSICBRAINZ_REPLICATION_TIME:-03:00}"
