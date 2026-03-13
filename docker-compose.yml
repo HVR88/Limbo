@@ -225,6 +225,7 @@ services:
       <<: *assets_depends
       slskd-preflight:
         condition: service_completed_successfully
+        required: false
 
   bootstrap:
     image: ${MBMS_DOCKERHUB_NAMESPACE:-espressomatic}/${MBMS_DOCKERHUB_REPO_PREFIX:-limbo}-bootstrap:${LIMBO_CHANNEL:-latest}
