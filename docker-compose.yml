@@ -2,7 +2,7 @@
 
 x-require-env: ${MUSICBRAINZ_REPLICATION_TOKEN}
 x-require-env-guard: ${MUSICBRAINZ_REPLICATION_TOKEN:?You need to set MUSICBRAINZ_REPLICATION_TOKEN in .env before starting.}
-x-require-env-guard-limbo-username: ${LIMBO_USERNAME:?You need to set LIMBO_USERNAME in .env before starting.}
+x-require-env-guard-limbo-username: ${LIMBO_USERNAME:?You need to set LIMBO_USERNAME in .env before starting. This is a newer Limbo version; create a fresh .env from the latest example.env and re-apply your custom values.}
 x-require-env-guard-limbo-password: ${LIMBO_PASSWORD:?You need to set LIMBO_PASSWORD in .env before starting.}
 x-require-env-guard-slskd-share: ${LIMBO_SLSKD_PARENT_MOUNT:?You need to set LIMBO_SLSKD_PARENT_MOUNT to a host path in .env before starting.}
 
@@ -82,6 +82,15 @@ services:
             /*) ;;
             *)
               echo "LIMBO_SLSKD_DOWNLOADS_MOUNT must be an absolute host path when set." >&2
+              exit 1
+              ;;
+          esac
+        fi
+        if [ -n "${LIMBO_SLSKD_SHARING_MOUNT:-}" ]; then
+          case "${LIMBO_SLSKD_SHARING_MOUNT}" in
+            /*) ;;
+            *)
+              echo "LIMBO_SLSKD_SHARING_MOUNT must be an absolute host path when set." >&2
               exit 1
               ;;
           esac
@@ -188,6 +197,11 @@ services:
         target: /music
         bind:
           create_host_path: false
+      - type: bind
+        source: ${LIMBO_SLSKD_SHARING_MOUNT:-${LIMBO_SLSKD_PARENT_MOUNT:?Set LIMBO_SLSKD_PARENT_MOUNT to an existing absolute host path before starting slskd.}/shared_files}
+        target: /shared_files
+        bind:
+          create_host_path: true
       - type: bind
         source: ${LIMBO_SLSKD_DOWNLOADS_MOUNT:-${LIMBO_SLSKD_PARENT_MOUNT:?Set LIMBO_SLSKD_PARENT_MOUNT to an existing absolute host path before starting slskd.}/slskd_downloads}
         target: /downloads
