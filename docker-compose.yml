@@ -1,4 +1,4 @@
-#   Limbo 1.9.313.217
+#   Limbo 1.9.313.220
 # Description: Deploy compose file with managed assets sync
 
 x-assets-depends: &assets_depends
@@ -130,7 +130,6 @@ services:
       - SLSKD_NO_AUTH=${SLSKD_WEBUI_NO_AUTH:-false}
       - SLSKD_USERNAME=${LIMBO_USERNAME:-}
       - SLSKD_PASSWORD=${LIMBO_PASSWORD:-}
-      - SLSKD_APIKEY=${LIMBO_APIKEY:-}
       - SLSKD_API_KEY=${LIMBO_APIKEY:-}
       - SLSKD_DOWNLOADS_DIR=/downloads
       - SLSKD_INCOMPLETE_DIR=/incomplete
@@ -161,7 +160,7 @@ services:
       <<: *assets_depends
       slskd-preflight:
         condition: service_completed_successfully
-        required: false
+        required: true
 
   bootstrap:
     image: ${LIMBO_DOCKERHUB_NAMESPACE:-${MBMS_DOCKERHUB_NAMESPACE:-espressomatic}}/${LIMBO_DOCKERHUB_REPO_PREFIX:-${MBMS_DOCKERHUB_REPO_PREFIX:-limbo}}-bootstrap:${LIMBO_CHANNEL:-latest}
