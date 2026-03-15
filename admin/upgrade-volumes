@@ -7,7 +7,7 @@ SCRIPT_NAME=$(basename "$0")
 HELP=$(cat <<'EOH'
 Usage: upgrade-volumes [--dry-run] [--cleanup]
 
-Migrate legacy mbms_plus_* volumes to limbo_* volumes.
+Migrate legacy MBDB volumes (`mbms_plus_*`) to limbo_* volumes.
 - Creates target volumes if missing.
 - Copies data (source -> target) and leaves sources intact.
 - For Limbo init-state volumes, merges multiple legacy names into
@@ -18,7 +18,7 @@ EOH
 )
 
 echo
-echo "Limbo MBMS_PLUS Volume Migration"
+echo "Limbo Legacy Volume Migration"
 
 DRY_RUN=0
 CLEANUP=0
@@ -63,7 +63,7 @@ if [ -f docker-compose.yml ]; then
 fi
 
 if [ -n "$($DOCKER_CMD ps --format '{{.Names}}' | grep -E '(^|_)mbms_plus|(^|_)limbo' || true)" ]; then
-  echo >&2 "Error: Detected running containers that look like MBMS/Limbo."
+  echo >&2 "Error: Detected running containers that look like legacy/Limbo."
   echo >&2 "Please stop the stack and re-run this script."
   exit 1
 fi
@@ -247,7 +247,7 @@ for src in "${INIT_SOURCES[@]}"; do
 done
 
 if [ ${#FOUND[@]} -eq 0 ]; then
-  echo "No matching mbms_plus_* volumes found. Nothing to migrate."
+  echo "No matching legacy MBDB volumes (mbms_plus_*) found. Nothing to migrate."
   exit 0
 fi
 
@@ -299,7 +299,7 @@ run_with_heartbeat() {
   return $status
 }
 
-# Standard mbms_plus_* volumes -> limbo_*
+# Standard legacy MBDB volumes (mbms_plus_*) -> limbo_*
 PAIRS=(
   "mbms_plus_pgdata:limbo_pgdata"
   "mbms_plus_mqdata:limbo_mqdata"
