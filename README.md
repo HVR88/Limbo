@@ -182,4 +182,6 @@ These helper scripts are synced into `admin/` automatically when the stack start
 - `admin/restart [services...]` (restart services)
 - `admin/replicate-now` (trigger replication immediately)
 - `admin/reindex-now` (trigger search reindex)
+- `admin/soulseek-auth-set --rotate [--json]` (roll and apply a generated Soulseek username/password)
+- `admin/soulseek-auth-set --username <name> [--password <pass>] [--json]` (pre-validates Soulseek login before apply; returns error instead of rotating on failure)
 - `admin/bootstrap-reset` (clear bootstrap markers; prompts for confirmation)
