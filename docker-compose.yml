@@ -1,4 +1,4 @@
-#   Limbo 1.9.316.238
+#   Limbo 1.9.316.241
 # Description: Deploy compose file with managed assets sync
 
 x-assets-depends: &assets_depends
@@ -365,6 +365,7 @@ services:
     volumes:
       - limbo_bridge_init_state:/metadata/init-state
       - ./admin/.limbo/assets/LIMBO_TAG_VERSION:/limbo/VERSION:ro
+      - /var/run/docker.sock:/var/run/docker.sock
     env_file:
       - .env
     environment:
