@@ -67,10 +67,6 @@ Next configure these minimum variables in the .env file:
 
 - Set **`MUSICBRAINZ_REPLICATION_TOKEN`** (get from https://metabrainz.org/profile)
 
-- Set **LIMBO_USERNAME** (user for Limbo and slskd webUIs)
-
-- Set **LIMBO_PASSWORD** (password for Limbo and slskd webUIs)
-
 - Set **LIMBO_SLSKD_PARENT_MOUNT** (must point at a real mount)
   - example: /mnt/MY_SMB_NAS_SHARE
 
