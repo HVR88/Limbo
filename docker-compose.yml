@@ -1,7 +1,5 @@
+#   Limbo 1.9.317.500
 # Description: Deploy compose file with managed assets sync
-
-x-require-env: ${MUSICBRAINZ_REPLICATION_TOKEN}
-x-require-env-guard: ${MUSICBRAINZ_REPLICATION_TOKEN:?You need to set MUSICBRAINZ_REPLICATION_TOKEN in .env before starting.}
 
 x-assets-depends: &assets_depends
   assets:
@@ -21,33 +19,45 @@ volumes:
   limbo_bridge_init_state:
     name: limbo_bridge_init_state
     driver: local
+  slskd_data:
+    driver: local
 
 services:
   assets:
-    image: ${MBMS_DOCKERHUB_NAMESPACE:-espressomatic}/${MBMS_DOCKERHUB_REPO_PREFIX:-limbo}-assets:${LIMBO_CHANNEL:-latest}
+    image: ${LIMBO_DOCKERHUB_NAMESPACE:-espressomatic}/${LIMBO_DOCKERHUB_REPO_PREFIX:-limbo}-assets:${LIMBO_CHANNEL:-latest}
     pull_policy: always
+    environment:
+      - LIMBO_ASSETS_FORCE_SYNC=${LIMBO_ASSETS_FORCE_SYNC:-1}
     volumes:
       - ./:/out
     restart: "no"
 
   preflight:
     image: alpine:3.20
-    entrypoint: ["/bin/sh", "-c"]
-    command:
-      - |
-        if [ -z "${MUSICBRAINZ_REPLICATION_TOKEN:-}" ]; then
-          echo "Missing MUSICBRAINZ_REPLICATION_TOKEN. Set it in .env before running docker compose up." >&2
-          exit 1
-        fi
-        echo "OK: replication token check passed."
+    entrypoint: ["/bin/sh", "/opt/limbo-preflight/core-env.sh"]
     env_file:
       - ./.env
+    volumes:
+      - ./.env:/run/limbo.env:ro
+      - ./admin/preflight:/opt/limbo-preflight:ro
+    restart: "no"
+    depends_on:
+      <<: *assets_depends
+
+  slskd-preflight:
+    image: alpine:3.20
+    entrypoint: ["/bin/sh", "/opt/limbo-preflight/slskd-mounts.sh"]
+    scale: ${LIMBO_SLSKD_SCALE:-1}
+    env_file:
+      - ./.env
+    volumes:
+      - ./admin/preflight:/opt/limbo-preflight:ro
     restart: "no"
     depends_on:
       <<: *assets_depends
 
   db:
-    image: ${MBMS_DOCKERHUB_NAMESPACE:-espressomatic}/${MBMS_DOCKERHUB_REPO_PREFIX:-limbo}-db:${LIMBO_CHANNEL:-latest}
+    image: ${LIMBO_DOCKERHUB_NAMESPACE:-espressomatic}/${LIMBO_DOCKERHUB_REPO_PREFIX:-limbo}-db:${LIMBO_CHANNEL:-latest}
     logging:
       driver: "json-file"
       options:
@@ -56,7 +66,7 @@ services:
     restart: unless-stopped
     command: postgres -c "shared_buffers=${POSTGRES_SHARED_BUFFERS:-4GB}" -c "shared_preload_libraries=pg_amqp.so"
     environment:
-      - TZ=${TZ:-America/Toronto}
+      - TZ=${TZ:-UTC}
       - POSTGRES_USER=${MB_DB_USER:-musicbrainz}
       - POSTGRES_PASSWORD=${MB_DB_PASSWORD:-musicbrainz}
     shm_size: "${POSTGRES_SHM_SIZE:-4GB}"
@@ -68,7 +78,7 @@ services:
       <<: *assets_depends
 
   mq:
-    image: ${MBMS_DOCKERHUB_NAMESPACE:-espressomatic}/${MBMS_DOCKERHUB_REPO_PREFIX:-limbo}-mq:${LIMBO_CHANNEL:-latest}
+    image: ${LIMBO_DOCKERHUB_NAMESPACE:-espressomatic}/${LIMBO_DOCKERHUB_REPO_PREFIX:-limbo}-mq:${LIMBO_CHANNEL:-latest}
     hostname: "mq"
     logging:
       driver: "json-file"
@@ -76,7 +86,7 @@ services:
         max-size: "10m"
         max-file: "10"
     environment:
-      - TZ=${TZ:-America/Toronto}
+      - TZ=${TZ:-UTC}
     restart: unless-stopped
     ulimits:
       nofile: 65536
@@ -95,17 +105,67 @@ services:
         max-size: "10m"
         max-file: "10"
     environment:
-      - TZ=${TZ:-America/Toronto}
+      - TZ=${TZ:-UTC}
     restart: unless-stopped
     expose:
       - "6379"
     depends_on:
       <<: *assets_depends
 
-  bootstrap:
-    image: ${MBMS_DOCKERHUB_NAMESPACE:-espressomatic}/${MBMS_DOCKERHUB_REPO_PREFIX:-limbo}-bootstrap:${LIMBO_CHANNEL:-latest}
+  slskd:
+    image: ${LIMBO_DOCKERHUB_NAMESPACE:-espressomatic}/${LIMBO_DOCKERHUB_REPO_PREFIX:-limbo}-slskd:${LIMBO_CHANNEL:-latest}
+    pull_policy: always
+    scale: ${LIMBO_SLSKD_SCALE:-1}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "10"
+    ports:
+      - "${SLSKD_WEB_SERVER_PORT:-5030}:5030"
+      - "${SLSKD_HTTPS_SERVER_PORT:-5031}:5031"
+      - "${SLSKD_SLSK_PORT:-50300}:50300"
     environment:
-      - TZ=${TZ:-America/Toronto}
+      - TZ=${TZ:-UTC}
+      - SLSKD_REMOTE_CONFIGURATION=${SLSKD_REMOTE_CONFIGURATION:-true}
+      - SLSKD_REMOTE_FILE_MANAGEMENT=${SLSKD_REMOTE_FILE_MANAGEMENT:-true}
+      - SLSKD_USERNAME=${LIMBO_USERNAME:-limbo}
+      - SLSKD_PASSWORD=${LIMBO_PASSWORD:-limbo}
+      - LIMBO_APIKEY=${LIMBO_APIKEY:-}
+      - SLSKD_API_KEY=${LIMBO_APIKEY:-}
+    volumes:
+      - slskd_data:/app
+      - limbo_bridge_init_state:/metadata/init-state
+      - type: bind
+        source: ${LIMBO_SLSKD_PARENT_MOUNT}
+        target: /music
+        bind:
+          create_host_path: true
+      - type: bind
+        source: ${LIMBO_SLSKD_SHARING_MOUNT:-${LIMBO_SLSKD_PARENT_MOUNT}/shared_files}
+        target: /shared_files
+        bind:
+          create_host_path: true
+      - type: bind
+        source: ${LIMBO_SLSKD_DOWNLOADS_MOUNT:-${LIMBO_SLSKD_PARENT_MOUNT}/slskd_downloads}
+        target: /downloads
+        bind:
+          create_host_path: true
+      - type: bind
+        source: ${LIMBO_SLSKD_INCOMPLETE_DOWNLOADS_MOUNT:-${LIMBO_SLSKD_DOWNLOADS_MOUNT:-${LIMBO_SLSKD_PARENT_MOUNT}/slskd_downloads}/slskd_incomplete}
+        target: /incomplete
+        bind:
+          create_host_path: true
+    restart: unless-stopped
+    depends_on:
+      <<: *assets_depends
+      slskd-preflight:
+        condition: service_completed_successfully
+
+  bootstrap:
+    image: ${LIMBO_DOCKERHUB_NAMESPACE:-espressomatic}/${LIMBO_DOCKERHUB_REPO_PREFIX:-limbo}-bootstrap:${LIMBO_CHANNEL:-latest}
+    environment:
+      - TZ=${TZ:-UTC}
       - POSTGRES_USER=${MB_DB_USER:-musicbrainz}
       - POSTGRES_PASSWORD=${MB_DB_PASSWORD:-musicbrainz}
       - MUSICBRAINZ_BOOTSTRAP_DB=${MUSICBRAINZ_BOOTSTRAP_DB:-1}
@@ -127,10 +187,10 @@ services:
         condition: service_started
 
   search-bootstrap:
-    image: ${MBMS_DOCKERHUB_NAMESPACE:-espressomatic}/${MBMS_DOCKERHUB_REPO_PREFIX:-limbo}-search:${LIMBO_CHANNEL:-latest}
+    image: ${LIMBO_DOCKERHUB_NAMESPACE:-espressomatic}/${LIMBO_DOCKERHUB_REPO_PREFIX:-limbo}-search:${LIMBO_CHANNEL:-latest}
     entrypoint: ["/usr/local/bin/bootstrap-indexes.sh"]
     environment:
-      - TZ=${TZ:-America/Toronto}
+      - TZ=${TZ:-UTC}
       - MUSICBRAINZ_BOOTSTRAP_SEARCH_INDEXES=${MUSICBRAINZ_BOOTSTRAP_SEARCH_INDEXES:-download}
       - MUSICBRAINZ_BOOTSTRAP_WAIT_FOR_DB=${MUSICBRAINZ_BOOTSTRAP_WAIT_FOR_DB:-1}
       - MUSICBRAINZ_BOOTSTRAP_DB_MARKER=${MUSICBRAINZ_BOOTSTRAP_DB_MARKER:-/media/dbdump/.bootstrap.db.done}
@@ -152,7 +212,7 @@ services:
         condition: service_completed_successfully
 
   search:
-    image: ${MBMS_DOCKERHUB_NAMESPACE:-espressomatic}/${MBMS_DOCKERHUB_REPO_PREFIX:-limbo}-search:${LIMBO_CHANNEL:-latest}
+    image: ${LIMBO_DOCKERHUB_NAMESPACE:-espressomatic}/${LIMBO_DOCKERHUB_REPO_PREFIX:-limbo}-search:${LIMBO_CHANNEL:-latest}
     logging:
       driver: "json-file"
       options:
@@ -162,7 +222,7 @@ services:
       nofile: 65536
     restart: unless-stopped
     environment:
-      - TZ=${TZ:-America/Toronto}
+      - TZ=${TZ:-UTC}
       - SOLR_HEAP=${SOLR_HEAP:-4g}
       - LOG4J_FORMAT_MSG_NO_LOOKUPS=true
     mem_swappiness: 1
@@ -178,7 +238,7 @@ services:
         condition: service_completed_successfully
 
   musicbrainz:
-    image: ${MBMS_DOCKERHUB_NAMESPACE:-espressomatic}/${MBMS_DOCKERHUB_REPO_PREFIX:-limbo}-musicbrainz:${LIMBO_CHANNEL:-latest}
+    image: ${LIMBO_DOCKERHUB_NAMESPACE:-espressomatic}/${LIMBO_DOCKERHUB_REPO_PREFIX:-limbo}-musicbrainz:${LIMBO_CHANNEL:-latest}
     logging:
       driver: "json-file"
       options:
@@ -191,29 +251,30 @@ services:
       - solrdump:/var/cache/musicbrainz/solr-backups:ro
     restart: unless-stopped
     environment:
-      - TZ=${TZ:-America/Toronto}
+      - TZ=${TZ:-UTC}
       - POSTGRES_USER=${MB_DB_USER:-musicbrainz}
       - POSTGRES_PASSWORD=${MB_DB_PASSWORD:-musicbrainz}
       - MUSICBRAINZ_BASE_FTP_URL=${MUSICBRAINZ_BASE_FTP_URL:-}
       - MUSICBRAINZ_BASE_DOWNLOAD_URL=${MUSICBRAINZ_BASE_DOWNLOAD_URL:-https://data.metabrainz.org/pub/musicbrainz}
       - MUSICBRAINZ_CAA_BASE_URL=${MUSICBRAINZ_CAA_BASE_URL:-}
       - MUSICBRAINZ_SERVER_PROCESSES=${MUSICBRAINZ_SERVER_PROCESSES:-10}
+      - MUSICBRAINZ_RUNTIME_MODE=${MUSICBRAINZ_RUNTIME_MODE:-headless}
       - STATIC_RESOURCES_LOCATION=${STATIC_RESOURCES_LOCATION:-/static/build}
-      - MUSICBRAINZ_REPLICATION_ENABLED=${MUSICBRAINZ_REPLICATION_ENABLED:-0}
+      - MUSICBRAINZ_REPLICATION_ENABLED=${MUSICBRAINZ_REPLICATION_ENABLED:-1}
       - MUSICBRAINZ_REPLICATION_TIME=${MUSICBRAINZ_REPLICATION_TIME:-03:00}
       - MUSICBRAINZ_REPLICATION_SCHEDULE=${MUSICBRAINZ_REPLICATION_SCHEDULE:-}
       - MUSICBRAINZ_REPLICATION_TOKEN=${MUSICBRAINZ_REPLICATION_TOKEN:-}
-      - MBMS_ADMIN_ENABLED=${MBMS_ADMIN_ENABLED:-0}
-      - MBMS_ADMIN_KEY=${MBMS_ADMIN_KEY:-}
-      - MBMS_ADMIN_HOST=${MBMS_ADMIN_HOST:-0.0.0.0}
-      - MBMS_ADMIN_PORT=${MBMS_ADMIN_PORT:-8099}
-      - MBMS_ADMIN_HEADER=${MBMS_ADMIN_HEADER:-X-MBMS-Key}
-      - MBMS_ADMIN_NOTIFY_URL=${MBMS_ADMIN_NOTIFY_URL:-http://limbo:5001/replication/notify}
-      - MBMS_ADMIN_NOTIFY_HEADER=${MBMS_ADMIN_NOTIFY_HEADER:-X-MBMS-Key}
-      - MBMS_ADMIN_NOTIFY_KEY=${MBMS_ADMIN_NOTIFY_KEY:-}
-      - MBMS_ADMIN_NOTIFY_TIMEOUT=${MBMS_ADMIN_NOTIFY_TIMEOUT:-5}
-      - MBMS_ADMIN_LOCK=${MBMS_ADMIN_LOCK:-/tmp/replication.pid}
-      - MBMS_ADMIN_REPL_SCRIPT=${MBMS_ADMIN_REPL_SCRIPT:-/usr/local/bin/replication.sh}
+      - LIMBO_ADMIN_ENABLED=${LIMBO_ADMIN_ENABLED:-true}
+      - LIMBO_ADMIN_KEY=${LIMBO_APIKEY:-}
+      - LIMBO_ADMIN_HOST=${LIMBO_ADMIN_HOST:-0.0.0.0}
+      - LIMBO_ADMIN_PORT=${LIMBO_ADMIN_PORT:-8099}
+      - LIMBO_ADMIN_HEADER=${LIMBO_ADMIN_HEADER:-X-Limbo-Key}
+      - LIMBO_ADMIN_NOTIFY_URL=${LIMBO_ADMIN_NOTIFY_URL:-http://limbo:5001/replication/notify}
+      - LIMBO_ADMIN_NOTIFY_HEADER=${LIMBO_ADMIN_NOTIFY_HEADER:-X-Limbo-Key}
+      - LIMBO_ADMIN_NOTIFY_KEY=${LIMBO_APIKEY:-}
+      - LIMBO_ADMIN_NOTIFY_TIMEOUT=${LIMBO_ADMIN_NOTIFY_TIMEOUT:-5}
+      - LIMBO_ADMIN_LOCK=${LIMBO_ADMIN_LOCK:-/tmp/replication.pid}
+      - LIMBO_ADMIN_REPL_SCRIPT=${LIMBO_ADMIN_REPL_SCRIPT:-/usr/local/bin/replication.sh}
       - MUSICBRAINZ_USE_PROXY=1
       - MUSICBRAINZ_WEB_SERVER_HOST=${MUSICBRAINZ_WEB_SERVER_HOST:-localhost}
       - MUSICBRAINZ_WEB_SERVER_PORT=${MUSICBRAINZ_WEB_SERVER_PORT:-5000}
@@ -235,9 +296,9 @@ services:
         condition: service_completed_successfully
 
   indexer:
-    image: ${MBMS_DOCKERHUB_NAMESPACE:-espressomatic}/${MBMS_DOCKERHUB_REPO_PREFIX:-limbo}-indexer:${LIMBO_CHANNEL:-latest}
+    image: ${LIMBO_DOCKERHUB_NAMESPACE:-espressomatic}/${LIMBO_DOCKERHUB_REPO_PREFIX:-limbo}-indexer:${LIMBO_CHANNEL:-latest}
     environment:
-      - TZ=${TZ:-America/Toronto}
+      - TZ=${TZ:-UTC}
       - POSTGRES_USER=${MB_DB_USER:-musicbrainz}
       - POSTGRES_PASSWORD=${MB_DB_PASSWORD:-musicbrainz}
     logging:
@@ -255,12 +316,12 @@ services:
         condition: service_started
 
   indexer-cron:
-    image: ${MBMS_DOCKERHUB_NAMESPACE:-espressomatic}/${MBMS_DOCKERHUB_REPO_PREFIX:-limbo}-indexer:${LIMBO_CHANNEL:-latest}
+    image: ${LIMBO_DOCKERHUB_NAMESPACE:-espressomatic}/${LIMBO_DOCKERHUB_REPO_PREFIX:-limbo}-indexer:${LIMBO_CHANNEL:-latest}
     environment:
-      - TZ=${TZ:-America/Toronto}
+      - TZ=${TZ:-UTC}
       - POSTGRES_USER=${MB_DB_USER:-musicbrainz}
       - POSTGRES_PASSWORD=${MB_DB_PASSWORD:-musicbrainz}
-      - MUSICBRAINZ_INDEXING_ENABLED=${MUSICBRAINZ_INDEXING_ENABLED:-0}
+      - MUSICBRAINZ_INDEXING_ENABLED=${MUSICBRAINZ_INDEXING_ENABLED:-1}
       - MUSICBRAINZ_INDEXING_TIME=${MUSICBRAINZ_INDEXING_TIME:-01:00}
       - MUSICBRAINZ_INDEXING_DAY=${MUSICBRAINZ_INDEXING_DAY:-Sunday}
       - MUSICBRAINZ_INDEXING_FREQUENCY=${MUSICBRAINZ_INDEXING_FREQUENCY:-weekly}
@@ -281,7 +342,7 @@ services:
     pull_policy: always
     entrypoint: ["/bin/bash", "/metadata/init/init-mbdb.sh"]
     environment:
-      TZ: ${TZ:-America/Toronto}
+      TZ: ${TZ:-UTC}
       MB_DB_HOST: ${MB_DB_HOST:-db}
       MB_DB_PORT: ${MB_DB_PORT:-5432}
       MB_DB_USER: ${MB_DB_USER:-musicbrainz}
@@ -305,25 +366,27 @@ services:
       - "${LIMBO_PORT:-5001}:5001"
     volumes:
       - limbo_bridge_init_state:/metadata/init-state
-      - ./.mbms/assets/MBMS_TAG_VERSION:/mbms/VERSION:ro
+      - ./admin/.limbo/assets/LIMBO_TAG_VERSION:/limbo/VERSION:ro
+      - /var/run/docker.sock:/var/run/docker.sock
     env_file:
       - .env
     environment:
-      TZ: ${TZ:-America/Toronto}
+      TZ: ${TZ:-UTC}
       # --- General ---
       DEBUG: "${DEBUG:-false}"
       PRODUCTION: "${PRODUCTION:-false}"
       LIDARR_METADATA_CONFIG: "${LIDARR_METADATA_CONFIG:-BRIDGE}"
+      LIMBO_APIKEY: "${LIMBO_APIKEY:-}"
       USE_CACHE: "${USE_CACHE:-true}"
       ENABLE_STATS: "${ENABLE_STATS:-false}"
       ROOT_PATH: "${ROOT_PATH:-}"
-      MBMS_PLUS_VERSION_FILE: "/mbms/VERSION"
-      MBMS_REPLICATION_SCHEDULE: "${MBMS_REPLICATION_SCHEDULE:-}"
-      MBMS_INDEX_SCHEDULE: "${MBMS_INDEX_SCHEDULE:-}"
-      MUSICBRAINZ_REPLICATION_ENABLED: "${MUSICBRAINZ_REPLICATION_ENABLED:-0}"
+      LIMBO_VERSION_FILE: "/limbo/VERSION"
+      LIMBO_REPLICATION_SCHEDULE: "${LIMBO_REPLICATION_SCHEDULE:-}"
+      LIMBO_INDEX_SCHEDULE: "${LIMBO_INDEX_SCHEDULE:-}"
+      MUSICBRAINZ_REPLICATION_ENABLED: "${MUSICBRAINZ_REPLICATION_ENABLED:-1}"
       MUSICBRAINZ_REPLICATION_SCHEDULE: "${MUSICBRAINZ_REPLICATION_SCHEDULE:-}"
       MUSICBRAINZ_REPLICATION_TIME: "${MUSICBRAINZ_REPLICATION_TIME:-03:00}"
-      MUSICBRAINZ_INDEXING_ENABLED: "${MUSICBRAINZ_INDEXING_ENABLED:-0}"
+      MUSICBRAINZ_INDEXING_ENABLED: "${MUSICBRAINZ_INDEXING_ENABLED:-1}"
       MUSICBRAINZ_INDEXING_SCHEDULE: "${MUSICBRAINZ_INDEXING_SCHEDULE:-}"
       MUSICBRAINZ_INDEXING_FREQUENCY: "${MUSICBRAINZ_INDEXING_FREQUENCY:-weekly}"
       MUSICBRAINZ_INDEXING_DAY: "${MUSICBRAINZ_INDEXING_DAY:-Sunday}"
