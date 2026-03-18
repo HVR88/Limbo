@@ -1,4 +1,4 @@
-#   Limbo 1.9.318.605
+#   Limbo 1.9.318.701
 # Description: Deploy compose file with managed assets sync
 
 x-assets-depends: &assets_depends
@@ -405,6 +405,14 @@ services:
       LIMBO_SECRET_DB_FILE: "${LIMBO_SECRET_DB_FILE:-/metadata/init-state/limbo-secrets.db}"
       LIMBO_SECRET_MASTER_KEY_FILE: "${LIMBO_SECRET_MASTER_KEY_FILE:-/metadata/init-state/limbo-secrets-master.key}"
       LIMBO_SECRET_MASTER_KEY: "${LIMBO_SECRET_MASTER_KEY:-}"
+      LIMBO_IMAGE_STORE_DIR: "${LIMBO_IMAGE_STORE_DIR:-/metadata/images}"
+      LIMBO_IMAGE_DOWNLOAD_MAX_BYTES: "${LIMBO_IMAGE_DOWNLOAD_MAX_BYTES:-10485760}"
+      LIMBO_IMAGE_DOWNLOAD_TIMEOUT_SECONDS: "${LIMBO_IMAGE_DOWNLOAD_TIMEOUT_SECONDS:-12}"
+      LIMBO_IMAGE_CACHE_TTL_DAYS: "${LIMBO_IMAGE_CACHE_TTL_DAYS:-30}"
+      LIMBO_IMAGE_CACHE_MAX_BYTES: "${LIMBO_IMAGE_CACHE_MAX_BYTES:-2147483648}"
+      LIMBO_IMAGE_CACHE_CLEANUP_ENABLED: "${LIMBO_IMAGE_CACHE_CLEANUP_ENABLED:-true}"
+      LIMBO_IMAGE_CACHE_CLEANUP_INTERVAL_SECONDS: "${LIMBO_IMAGE_CACHE_CLEANUP_INTERVAL_SECONDS:-3600}"
+      LIMBO_IMAGE_CACHE_CLEANUP_STARTUP_DELAY_SECONDS: "${LIMBO_IMAGE_CACHE_CLEANUP_STARTUP_DELAY_SECONDS:-120}"
 
       # --- Redis ---
       REDIS_HOST: "${REDIS_HOST:-redis}"
@@ -425,14 +433,6 @@ services:
       POSTGRES_CACHE_USER: "${LIMBO_CACHE_USER:-limbo}"
       POSTGRES_CACHE_PASSWORD: "${LIMBO_CACHE_PASSWORD:-limbo}"
 
-      # --- External providers (fill in later) ---
-      FANART_KEY: "${FANART_KEY:-}"
-      TADB_KEY: "${TADB_KEY:-2}"
-      LASTFM_KEY: "${LASTFM_KEY:-}"
-      LASTFM_SECRET: "${LASTFM_SECRET:-}"
-      SPOTIFY_ID: "${SPOTIFY_ID:-}"
-      SPOTIFY_SECRET: "${SPOTIFY_SECRET:-}"
-      SPOTIFY_REDIRECT_URL: "${SPOTIFY_REDIRECT_URL:-http://HOST_IP:5001}"
     restart: unless-stopped
     depends_on:
       <<: *assets_depends
