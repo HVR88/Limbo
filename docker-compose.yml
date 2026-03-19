@@ -1,4 +1,4 @@
-#   Limbo 1.9.317.500
+#   Limbo 1.9.320.0
 # Description: Deploy compose file with managed assets sync
 
 x-assets-depends: &assets_depends
@@ -33,25 +33,22 @@ services:
     restart: "no"
 
   preflight:
-    image: alpine:3.20
+    image: ${LIMBO_IMAGE:-espressomatic/limbo-bridge:${LIMBO_CHANNEL:-latest}}
     entrypoint: ["/bin/sh", "/opt/limbo-preflight/core-env.sh"]
     env_file:
       - ./.env
     volumes:
       - ./.env:/run/limbo.env:ro
-      - ./admin/preflight:/opt/limbo-preflight:ro
     restart: "no"
     depends_on:
       <<: *assets_depends
 
   slskd-preflight:
-    image: alpine:3.20
+    image: ${LIMBO_IMAGE:-espressomatic/limbo-bridge:${LIMBO_CHANNEL:-latest}}
     entrypoint: ["/bin/sh", "/opt/limbo-preflight/slskd-mounts.sh"]
     scale: ${LIMBO_SLSKD_SCALE:-1}
     env_file:
       - ./.env
-    volumes:
-      - ./admin/preflight:/opt/limbo-preflight:ro
     restart: "no"
     depends_on:
       <<: *assets_depends
@@ -368,6 +365,31 @@ services:
       - limbo_bridge_init_state:/metadata/init-state
       - ./admin/.limbo/assets/LIMBO_TAG_VERSION:/limbo/VERSION:ro
       - /var/run/docker.sock:/var/run/docker.sock
+      - type: bind
+        source: ${LIMBO_LIDARR_ROOT_FOLDER_1:-${LIMBO_SLSKD_PARENT_MOUNT}}
+        target: /limbo/lidarr-root-1
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${LIMBO_LIDARR_ROOT_FOLDER_2:-${LIMBO_LIDARR_ROOT_FOLDER_1:-${LIMBO_SLSKD_PARENT_MOUNT}}}
+        target: /limbo/lidarr-root-2
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${LIMBO_LIDARR_ROOT_FOLDER_3:-${LIMBO_LIDARR_ROOT_FOLDER_2:-${LIMBO_LIDARR_ROOT_FOLDER_1:-${LIMBO_SLSKD_PARENT_MOUNT}}}}
+        target: /limbo/lidarr-root-3
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${LIMBO_LIDARR_ROOT_FOLDER_4:-${LIMBO_LIDARR_ROOT_FOLDER_3:-${LIMBO_LIDARR_ROOT_FOLDER_2:-${LIMBO_LIDARR_ROOT_FOLDER_1:-${LIMBO_SLSKD_PARENT_MOUNT}}}}}
+        target: /limbo/lidarr-root-4
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${LIMBO_LIDARR_ROOT_FOLDER_5:-${LIMBO_LIDARR_ROOT_FOLDER_4:-${LIMBO_LIDARR_ROOT_FOLDER_3:-${LIMBO_LIDARR_ROOT_FOLDER_2:-${LIMBO_LIDARR_ROOT_FOLDER_1:-${LIMBO_SLSKD_PARENT_MOUNT}}}}}}
+        target: /limbo/lidarr-root-5
+        bind:
+          create_host_path: false
     env_file:
       - .env
     environment:
@@ -391,6 +413,28 @@ services:
       MUSICBRAINZ_INDEXING_FREQUENCY: "${MUSICBRAINZ_INDEXING_FREQUENCY:-weekly}"
       MUSICBRAINZ_INDEXING_DAY: "${MUSICBRAINZ_INDEXING_DAY:-Sunday}"
       MUSICBRAINZ_INDEXING_TIME: "${MUSICBRAINZ_INDEXING_TIME:-01:00}"
+      LIMBO_ART_ENGINE_ENABLED: "${LIMBO_ART_ENGINE_ENABLED:-true}"
+      LIMBO_ART_ENGINE_CACHE_ENABLED: "${LIMBO_ART_ENGINE_CACHE_ENABLED:-true}"
+      LIMBO_ART_ENGINE_CACHE_TTL_SECONDS: "${LIMBO_ART_ENGINE_CACHE_TTL_SECONDS:-}"
+      LIMBO_ARTWORK_DEBUG_ENABLED: "${LIMBO_ARTWORK_DEBUG_ENABLED:-false}"
+      LIMBO_REFRESH_VALIDATE_TIMEOUT_SECONDS: "${LIMBO_REFRESH_VALIDATE_TIMEOUT_SECONDS:-15}"
+      LIMBO_SLSKD_SHARE_REPAIR_ENABLED: "${LIMBO_SLSKD_SHARE_REPAIR_ENABLED:-true}"
+      LIMBO_SLSKD_SHARE_REPAIR_INTERVAL_SECONDS: "${LIMBO_SLSKD_SHARE_REPAIR_INTERVAL_SECONDS:-900}"
+      LIMBO_SLSKD_SHARE_REPAIR_STARTUP_DELAY_SECONDS: "${LIMBO_SLSKD_SHARE_REPAIR_STARTUP_DELAY_SECONDS:-120}"
+      LIMBO_SLSKD_SHARE_REPAIR_COOLDOWN_SECONDS: "${LIMBO_SLSKD_SHARE_REPAIR_COOLDOWN_SECONDS:-1800}"
+      LIMBO_SLSKD_SHARE_REPAIR_SET_NO_SCAN_FALSE: "${LIMBO_SLSKD_SHARE_REPAIR_SET_NO_SCAN_FALSE:-false}"
+      LIMBO_SLSKD_SHARE_REPAIR_RESTART_AFTER_APPLY: "${LIMBO_SLSKD_SHARE_REPAIR_RESTART_AFTER_APPLY:-true}"
+      LIMBO_SECRET_DB_FILE: "${LIMBO_SECRET_DB_FILE:-/metadata/init-state/limbo-secrets.db}"
+      LIMBO_SECRET_MASTER_KEY_FILE: "${LIMBO_SECRET_MASTER_KEY_FILE:-/metadata/init-state/limbo-secrets-master.key}"
+      LIMBO_SECRET_MASTER_KEY: "${LIMBO_SECRET_MASTER_KEY:-}"
+      LIMBO_IMAGE_STORE_DIR: "${LIMBO_IMAGE_STORE_DIR:-/metadata/images}"
+      LIMBO_IMAGE_DOWNLOAD_MAX_BYTES: "${LIMBO_IMAGE_DOWNLOAD_MAX_BYTES:-10485760}"
+      LIMBO_IMAGE_DOWNLOAD_TIMEOUT_SECONDS: "${LIMBO_IMAGE_DOWNLOAD_TIMEOUT_SECONDS:-12}"
+      LIMBO_IMAGE_CACHE_TTL_DAYS: "${LIMBO_IMAGE_CACHE_TTL_DAYS:-30}"
+      LIMBO_IMAGE_CACHE_MAX_BYTES: "${LIMBO_IMAGE_CACHE_MAX_BYTES:-2147483648}"
+      LIMBO_IMAGE_CACHE_CLEANUP_ENABLED: "${LIMBO_IMAGE_CACHE_CLEANUP_ENABLED:-true}"
+      LIMBO_IMAGE_CACHE_CLEANUP_INTERVAL_SECONDS: "${LIMBO_IMAGE_CACHE_CLEANUP_INTERVAL_SECONDS:-3600}"
+      LIMBO_IMAGE_CACHE_CLEANUP_STARTUP_DELAY_SECONDS: "${LIMBO_IMAGE_CACHE_CLEANUP_STARTUP_DELAY_SECONDS:-120}"
 
       # --- Redis ---
       REDIS_HOST: "${REDIS_HOST:-redis}"
@@ -411,14 +455,6 @@ services:
       POSTGRES_CACHE_USER: "${LIMBO_CACHE_USER:-limbo}"
       POSTGRES_CACHE_PASSWORD: "${LIMBO_CACHE_PASSWORD:-limbo}"
 
-      # --- External providers (fill in later) ---
-      FANART_KEY: "${FANART_KEY:-}"
-      TADB_KEY: "${TADB_KEY:-2}"
-      LASTFM_KEY: "${LASTFM_KEY:-}"
-      LASTFM_SECRET: "${LASTFM_SECRET:-}"
-      SPOTIFY_ID: "${SPOTIFY_ID:-}"
-      SPOTIFY_SECRET: "${SPOTIFY_SECRET:-}"
-      SPOTIFY_REDIRECT_URL: "${SPOTIFY_REDIRECT_URL:-http://HOST_IP:5001}"
     restart: unless-stopped
     depends_on:
       <<: *assets_depends

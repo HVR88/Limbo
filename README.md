@@ -18,8 +18,9 @@ From the Limbo WebUI, you can filter/modify media formats for all releases, set 
 
 - Release filtering
 - Release / Artist refreshing
-- Data providers with custom priorities (partial)
+- Art + Data providers selection & priority ordering
 - Automated / Manual Download Manager (work in progress)
+- Library Statistics
 
 Other features are currently in development or testing. Update notifications are displayed at the bottom of the Limbo WebUI.
 
