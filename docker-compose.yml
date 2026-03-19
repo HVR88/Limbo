@@ -1,4 +1,4 @@
-#   Limbo 1.9.318.709
+#   Limbo 1.9.319.717
 # Description: Deploy compose file with managed assets sync
 
 x-assets-depends: &assets_depends
@@ -365,6 +365,31 @@ services:
       - limbo_bridge_init_state:/metadata/init-state
       - ./admin/.limbo/assets/LIMBO_TAG_VERSION:/limbo/VERSION:ro
       - /var/run/docker.sock:/var/run/docker.sock
+      - type: bind
+        source: ${LIMBO_LIDARR_ROOT_FOLDER_1:-${LIMBO_SLSKD_PARENT_MOUNT}}
+        target: /limbo/lidarr-root-1
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${LIMBO_LIDARR_ROOT_FOLDER_2:-${LIMBO_LIDARR_ROOT_FOLDER_1:-${LIMBO_SLSKD_PARENT_MOUNT}}}
+        target: /limbo/lidarr-root-2
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${LIMBO_LIDARR_ROOT_FOLDER_3:-${LIMBO_LIDARR_ROOT_FOLDER_2:-${LIMBO_LIDARR_ROOT_FOLDER_1:-${LIMBO_SLSKD_PARENT_MOUNT}}}}
+        target: /limbo/lidarr-root-3
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${LIMBO_LIDARR_ROOT_FOLDER_4:-${LIMBO_LIDARR_ROOT_FOLDER_3:-${LIMBO_LIDARR_ROOT_FOLDER_2:-${LIMBO_LIDARR_ROOT_FOLDER_1:-${LIMBO_SLSKD_PARENT_MOUNT}}}}}
+        target: /limbo/lidarr-root-4
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${LIMBO_LIDARR_ROOT_FOLDER_5:-${LIMBO_LIDARR_ROOT_FOLDER_4:-${LIMBO_LIDARR_ROOT_FOLDER_3:-${LIMBO_LIDARR_ROOT_FOLDER_2:-${LIMBO_LIDARR_ROOT_FOLDER_1:-${LIMBO_SLSKD_PARENT_MOUNT}}}}}}
+        target: /limbo/lidarr-root-5
+        bind:
+          create_host_path: false
     env_file:
       - .env
     environment:
