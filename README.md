@@ -108,11 +108,12 @@ docker compose logs -f --no-log-prefix --tail=200 \
 
 ## Browser Access / Status
 
-When finished, the Limbo settings are available at **http://HOST_IP:5001**
+**Limbo** web UI: **http://HOST_IP:5001**
 
-And the standard MusicBrainz webUI at **http://HOST_IP:5000**
+**SLSKD** web UI: **http://HOST_IP:5030** (HTTPS: `5031`)
 
-And slskd is available at **http://HOST_IP:5030** (HTTPS: `5031`)
+**MusicBrainz** local web site: **http://HOST_IP:5000**
+<br>(Off by default, enable it in Limbo Provider Settings)
 
 > [!TIP]
 >
