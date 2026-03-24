@@ -12,14 +12,16 @@ Based on the Lidarr Metadata API, coupled with a customized MusicBrainz database
 
 _You say that you don't want vinyl formats in releases? No problem, filter that out._
 
-From the Limbo web interface, you can filter/modify media formats for all releases, track multiple versions of the same album in Lidarr, set up additional data providers, inclduing login-less and free options, and more.
+From the Limbo web interface, you can filter/modify media formats for all releases, track multiple versions of the same album in Lidarr, set up additional data providers, inclduing login-less free options, and more.
 
 **Currently implemented features:**
 
 - Library Statistics
 - Release filtering (block specific media formats: vinyl, tape, etc.)
 - Release / Artist refreshing (paste URL/ID single/bulk and refrecs albums/artists)
-- Expanded Art + Data providers selection, with drag & drop priority order
+- Artist Photos, Cover Art + Data providers selection, with drag & drop priority
+- One-shot bulk artwork search with direct Lidarr DB access (partial)
+- Lidarr task/process control (partial - API (carrot) and direct (stick))
 - Automated / Manual Download Manager (partial - slskd)
 
 Other features are currently in development or testing. Update notifications are displayed at the bottom of the Limbo WebUI.
