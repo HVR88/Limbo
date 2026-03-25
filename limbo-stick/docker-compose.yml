@@ -1,11 +1,11 @@
 services:
   limbo-stick:
-    image: ${LIMBO_STICK_IMAGE:-limbo-stick:local}
+    image: espressomatic/limbo-stick:test
     container_name: limbo-stick
     restart: unless-stopped
     environment:
       API_SERVICE: ${API_SERVICE:-true}
-      LIDARR_URL: ${LIDARR_URL:-http://10.8.9.96:8686}
+      LIDARR_URL: ${LIDARR_URL}
       API_KEY: ${API_KEY:-}
       AUTO_ATTACH_LIDARR_NETWORK: ${AUTO_ATTACH_LIDARR_NETWORK:-true}
       LIMBO_CONTAINER_NAME: ${LIMBO_CONTAINER_NAME:-limbo-stick}
