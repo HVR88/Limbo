@@ -149,6 +149,15 @@ docker compose pull
 docker compose up -d
 ```
 
+If you want MusicBrainz to remain permanently fixed (no automatic refresh), pin it to an immutable digest in `.env` and disable pulling for that service:
+
+```bash
+MUSICBRAINZ_IMAGE=espressomatic/limbo-musicbrainz:test@sha256:<digest>
+MUSICBRAINZ_PULL_POLICY=never
+```
+
+With that pin in place, regular `docker compose pull` / `docker compose up -d` updates will keep your existing MusicBrainz image indefinitely until you intentionally change the digest.
+
 ### Major update (with new components, etc.)
 
 Pull the latest images and restart two times:

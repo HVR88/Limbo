@@ -337,7 +337,8 @@ services:
         condition: service_completed_successfully
 
   musicbrainz:
-    image: ${LIMBO_DOCKERHUB_NAMESPACE:-espressomatic}/${LIMBO_DOCKERHUB_REPO_PREFIX:-limbo}-musicbrainz:${LIMBO_CHANNEL:-latest}
+    image: ${MUSICBRAINZ_IMAGE:-${LIMBO_DOCKERHUB_NAMESPACE:-espressomatic}/${LIMBO_DOCKERHUB_REPO_PREFIX:-limbo}-musicbrainz:${LIMBO_CHANNEL:-latest}}
+    pull_policy: ${MUSICBRAINZ_PULL_POLICY:-missing}
     logging:
       driver: "json-file"
       options:
