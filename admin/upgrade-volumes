@@ -233,8 +233,9 @@ INIT_SOURCES=(
   "${LEGACY_PREFIX}limbo_init_state"
   "${LEGACY_PREFIX}lmbridge-init-state"
   "${LEGACY_PREFIX}lmbridge_init_state"
+  "limbo_bridge_init_state"
 )
-INIT_TARGET="limbo_bridge_init_state"
+INIT_TARGET="limbo_data"
 for src in "${INIT_SOURCES[@]}"; do
   if volume_exists "$src"; then
     FOUND+=("$src ($(volume_size "$src")) -> $INIT_TARGET")
@@ -318,11 +319,12 @@ for pair in "${PAIRS[@]}"; do
 done
 
 # Merge legacy Limbo init-state volumes into a single fixed target.
-INIT_TARGET="limbo_bridge_init_state"
+INIT_TARGET="limbo_data"
 INIT_SOURCES=(
   "${LEGACY_PREFIX}limbo_init_state"
   "${LEGACY_PREFIX}lmbridge-init-state"
   "${LEGACY_PREFIX}lmbridge_init_state"
+  "limbo_bridge_init_state"
 )
 
 for src in "${INIT_SOURCES[@]}"; do

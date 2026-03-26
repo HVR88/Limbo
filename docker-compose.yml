@@ -1,4 +1,4 @@
-#   Limbo 1.9.325.811
+#   Limbo 1.9.326.815
 # Description: Deploy compose file with managed assets sync
 
 x-assets-depends: &assets_depends
@@ -16,6 +16,9 @@ volumes:
     driver: local
   solrdump:
     driver: local
+  limbo_data:
+    name: limbo_data
+    driver: local
   limbo_bridge_init_state:
     name: limbo_bridge_init_state
     driver: local
@@ -28,7 +31,7 @@ services:
     pull_policy: always
     environment:
       - LIMBO_ASSETS_FORCE_SYNC=${LIMBO_ASSETS_FORCE_SYNC:-1}
-      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.325.811
+      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.326.815
     volumes:
       - ./:/out
     restart: "no"
@@ -75,6 +78,43 @@ services:
       host-ip-preflight:
         condition: service_completed_successfully
 
+  limbo-data-migrate:
+    image: ${LIMBO_IMAGE:-espressomatic/limbo:${LIMBO_CHANNEL:-latest}}
+    pull_policy: always
+    entrypoint: ["/bin/sh", "-lc"]
+    command:
+      - |
+        set -eu
+        src="/legacy-init-state"
+        dst="/metadata/limbo_data"
+        marker="$$dst/.migrated-from-limbo_bridge_init_state"
+        mkdir -p "$$src" "$$dst"
+
+        src_has_data="$$(find "$$src" -mindepth 1 -print -quit 2>/dev/null || true)"
+        dst_has_data="$$(find "$$dst" -mindepth 1 ! -name '.migrated-from-limbo_bridge_init_state' -print -quit 2>/dev/null || true)"
+
+        if [ -n "$$dst_has_data" ]; then
+          echo "limbo-data-migrate: target volume already has data; skipping copy."
+          touch "$$marker"
+          exit 0
+        fi
+        if [ -z "$$src_has_data" ]; then
+          echo "limbo-data-migrate: legacy source volume is empty or missing; nothing to copy."
+          touch "$$marker"
+          exit 0
+        fi
+
+        echo "limbo-data-migrate: copying data from limbo_bridge_init_state to limbo_data..."
+        (cd "$$src" && tar -cf - .) | (cd "$$dst" && tar -xpf -)
+        touch "$$marker"
+        echo "limbo-data-migrate: migration complete."
+    volumes:
+      - limbo_bridge_init_state:/legacy-init-state:ro
+      - limbo_data:/metadata/limbo_data
+    restart: "no"
+    depends_on:
+      <<: *assets_depends
+
   limbo-key-init:
     image: ${LIMBO_IMAGE:-espressomatic/limbo:${LIMBO_CHANNEL:-latest}}
     pull_policy: always
@@ -87,7 +127,7 @@ services:
         from pathlib import Path
         from metadata_srv.services import secret_store
 
-        state_dir = Path(os.getenv("LIMBO_INIT_STATE_DIR", "/metadata/init-state"))
+        state_dir = Path(os.getenv("LIMBO_INIT_STATE_DIR", "/metadata/limbo_data"))
         state_dir.mkdir(parents=True, exist_ok=True)
 
         key = str(secret_store.get_secret("limbo.apikey") or "").strip()
@@ -99,19 +139,20 @@ services:
 
         key_file = state_dir / "limbo_apikey.txt"
         try:
-            current = key_file.read_text(encoding="utf-8").strip()
+            if key_file.exists():
+                key_file.unlink()
         except Exception:
-            current = ""
-        if key and current != key:
-            key_file.write_text(key + "\n", encoding="utf-8")
+            pass
 
         print("limbo-key-init:", "created" if created else "exists")
         PY
     volumes:
-      - limbo_bridge_init_state:/metadata/init-state
+      - limbo_data:/metadata/limbo_data
     restart: "no"
     depends_on:
       <<: *assets_depends
+      limbo-data-migrate:
+        condition: service_completed_successfully
 
   db:
     image: ${LIMBO_DOCKERHUB_NAMESPACE:-espressomatic}/${LIMBO_DOCKERHUB_REPO_PREFIX:-limbo}-db:${LIMBO_CHANNEL:-latest}
@@ -192,7 +233,7 @@ services:
       - SLSKD_API_KEY=${LIMBO_APIKEY:-}
     volumes:
       - slskd_data:/app
-      - limbo_bridge_init_state:/metadata/init-state
+      - limbo_data:/metadata/limbo_data
       - type: bind
         source: ${LIMBO_SLSKD_PARENT_MOUNT}
         target: /music
@@ -217,6 +258,8 @@ services:
     depends_on:
       <<: *assets_depends
       slskd-preflight:
+        condition: service_completed_successfully
+      limbo-data-migrate:
         condition: service_completed_successfully
 
   bootstrap:
@@ -301,11 +344,11 @@ services:
         max-size: "50m"
         max-file: "50"
     ports:
-      - "${MUSICBRAINZ_DOCKER_HOST_IPADDRCOL:-}${MUSICBRAINZ_WEB_SERVER_PORT:-5000}:5000"
+      - "${MUSICBRAINZ_DOCKER_HOST_IPADDRCOL:-}${MUSICBRAINZ_WEB_SERVER_PORT:-4815}:4815"
     volumes:
       - dbdump:/media/dbdump
       - solrdump:/var/cache/musicbrainz/solr-backups:ro
-      - limbo_bridge_init_state:/metadata/init-state:ro
+      - limbo_data:/metadata/limbo_data:ro
     restart: unless-stopped
     environment:
       - TZ=${TZ:-UTC}
@@ -325,14 +368,14 @@ services:
       - LIMBO_ADMIN_HOST=${LIMBO_ADMIN_HOST:-0.0.0.0}
       - LIMBO_ADMIN_PORT=${LIMBO_ADMIN_PORT:-8099}
       - LIMBO_ADMIN_HEADER=${LIMBO_ADMIN_HEADER:-X-Limbo-Key}
-      - LIMBO_ADMIN_NOTIFY_URL=${LIMBO_ADMIN_NOTIFY_URL:-http://limbo:5001/replication/notify}
+      - LIMBO_ADMIN_NOTIFY_URL=${LIMBO_ADMIN_NOTIFY_URL:-http://limbo:4808/replication/notify}
       - LIMBO_ADMIN_NOTIFY_HEADER=${LIMBO_ADMIN_NOTIFY_HEADER:-X-Limbo-Key}
       - LIMBO_ADMIN_NOTIFY_TIMEOUT=${LIMBO_ADMIN_NOTIFY_TIMEOUT:-5}
       - LIMBO_ADMIN_LOCK=${LIMBO_ADMIN_LOCK:-/tmp/replication.pid}
       - LIMBO_ADMIN_REPL_SCRIPT=${LIMBO_ADMIN_REPL_SCRIPT:-/usr/local/bin/replication.sh}
       - MUSICBRAINZ_USE_PROXY=1
       - MUSICBRAINZ_WEB_SERVER_HOST=${MUSICBRAINZ_WEB_SERVER_HOST:-localhost}
-      - MUSICBRAINZ_WEB_SERVER_PORT=${MUSICBRAINZ_WEB_SERVER_PORT:-5000}
+      - MUSICBRAINZ_WEB_SERVER_PORT=${MUSICBRAINZ_WEB_SERVER_PORT:-4815}
     depends_on:
       <<: *assets_depends
       preflight:
@@ -421,10 +464,12 @@ services:
   limbo:
     image: ${LIMBO_IMAGE:-espressomatic/limbo:${LIMBO_CHANNEL:-latest}}
     pull_policy: always
+    cap_add:
+      - SYS_ADMIN
     ports:
-      - "${LIMBO_PORT:-5001}:5001"
+      - "${LIMBO_PORT:-4808}:4808"
     volumes:
-      - limbo_bridge_init_state:/metadata/init-state
+      - limbo_data:/metadata/limbo_data
       - dbdump:/media/dbdump:ro
       - ./admin/.limbo/assets/LIMBO_TAG_VERSION:/limbo/VERSION:ro
       - /var/run/docker.sock:/var/run/docker.sock
@@ -508,8 +553,9 @@ services:
       LIMBO_SLSKD_SHARE_REPAIR_COOLDOWN_SECONDS: "${LIMBO_SLSKD_SHARE_REPAIR_COOLDOWN_SECONDS:-1800}"
       LIMBO_SLSKD_SHARE_REPAIR_SET_NO_SCAN_FALSE: "${LIMBO_SLSKD_SHARE_REPAIR_SET_NO_SCAN_FALSE:-false}"
       LIMBO_SLSKD_SHARE_REPAIR_RESTART_AFTER_APPLY: "${LIMBO_SLSKD_SHARE_REPAIR_RESTART_AFTER_APPLY:-true}"
-      LIMBO_SECRET_DB_FILE: "${LIMBO_SECRET_DB_FILE:-/metadata/init-state/limbo-secrets.db}"
-      LIMBO_SECRET_MASTER_KEY_FILE: "${LIMBO_SECRET_MASTER_KEY_FILE:-/metadata/init-state/limbo-secrets-master.key}"
+      LIMBO_INIT_STATE_DIR: "${LIMBO_INIT_STATE_DIR:-/metadata/limbo_data}"
+      LIMBO_SECRET_DB_FILE: "${LIMBO_SECRET_DB_FILE:-/metadata/limbo_data/limbo-secrets.db}"
+      LIMBO_SECRET_MASTER_KEY_FILE: "${LIMBO_SECRET_MASTER_KEY_FILE:-/metadata/limbo_data/limbo-secrets-master.key}"
       LIMBO_SECRET_MASTER_KEY: "${LIMBO_SECRET_MASTER_KEY:-}"
       LIMBO_IMAGE_STORE_DIR: "${LIMBO_IMAGE_STORE_DIR:-/metadata/images}"
       LIMBO_IMAGE_DOWNLOAD_MAX_BYTES: "${LIMBO_IMAGE_DOWNLOAD_MAX_BYTES:-10485760}"
@@ -520,7 +566,7 @@ services:
       LIMBO_IMAGE_CACHE_CLEANUP_INTERVAL_SECONDS: "${LIMBO_IMAGE_CACHE_CLEANUP_INTERVAL_SECONDS:-3600}"
       LIMBO_IMAGE_CACHE_CLEANUP_STARTUP_DELAY_SECONDS: "${LIMBO_IMAGE_CACHE_CLEANUP_STARTUP_DELAY_SECONDS:-120}"
       LIMBO_LIDARR_LIBRARY_TOOL_ENABLED: "${LIMBO_LIDARR_LIBRARY_TOOL_ENABLED:-false}"
-      LIMBO_LIDARR_LIBRARY_TOOL_DB_PATH: "${LIMBO_LIDARR_LIBRARY_TOOL_DB_PATH:-/metadata/init-state/lidarr-library-tool.db}"
+      LIMBO_LIDARR_LIBRARY_TOOL_DB_PATH: "${LIMBO_LIDARR_LIBRARY_TOOL_DB_PATH:-/metadata/limbo_data/lidarr-library-tool.db}"
       LIMBO_LIDARR_LIBRARY_TOOL_SYNC_INTERVAL_SECONDS: "${LIMBO_LIDARR_LIBRARY_TOOL_SYNC_INTERVAL_SECONDS:-1800}"
       LIMBO_LIDARR_LIBRARY_TOOL_STARTUP_DELAY_SECONDS: "${LIMBO_LIDARR_LIBRARY_TOOL_STARTUP_DELAY_SECONDS:-45}"
       LIMBO_LIDARR_LIBRARY_TOOL_HTTP_TIMEOUT_SECONDS: "${LIMBO_LIDARR_LIBRARY_TOOL_HTTP_TIMEOUT_SECONDS:-120}"

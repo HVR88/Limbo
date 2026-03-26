@@ -92,6 +92,12 @@ You can optionally set the following variables if you want a different top-level
 docker compose up -d
 ```
 
+> [!NOTE]
+>
+> Limbo init-state volume is now `limbo_data`. Existing installs using the legacy
+> `limbo_bridge_init_state` volume are migrated automatically on startup. The
+> in-container state path is now `/metadata/limbo_data`.
+
 ## Wrap-Up
 
 You can monitor the progress of the long first-time installation jobs from another terminal:
@@ -110,11 +116,11 @@ docker compose logs -f --no-log-prefix --tail=200 \
 
 ## Browser Access / Status
 
-**Limbo** web UI: **http://HOST_IP:5001**
+**Limbo** web UI: **http://HOST_IP:4808**
 
 **SLSKD** web UI: **http://HOST_IP:5030** (HTTPS: `5031`)
 
-**MusicBrainz** local web site: **http://HOST_IP:5000**
+**MusicBrainz** local web site: **http://HOST_IP:4815**
 <br>(Off by default, enable it in Limbo Provider Settings)
 
 > [!TIP]
@@ -160,7 +166,7 @@ You should also look in the _`example.env`_ file for updates that may need to be
 
 **WORK IN PROGRESS**
 
-Go to **http://<your_LIMBO_IP>:5001**
+Go to **http://<your_LIMBO_IP>:4808**
 
 _**Use the SETTINGS button on the top right of the webUI to configure your Lidarr IP address, port and API KEY. The API Key can be found in Lidarr's Settings -> General page.**_
 
