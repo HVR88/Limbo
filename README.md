@@ -86,8 +86,8 @@ Storage server discovery (SMB/mDNS) now uses a host-network helper by default.
 These defaults are in `example.env` and normally should be left as-is:
 
 - `LIMBO_DISCOVERY_HELPER_HOST=0.0.0.0`
-- `LIMBO_DISCOVERY_HELPER_PORT=4818`
-- `LIMBO_STORAGE_DISCOVERY_HELPER_URL=http://host.docker.internal:4818`
+- `LIMBO_DISCOVERY_HELPER_PORT=4809`
+- `LIMBO_STORAGE_DISCOVERY_HELPER_URL=http://host.docker.internal:4809`
 
 > [!TIP]
 >
