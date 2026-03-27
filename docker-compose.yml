@@ -462,7 +462,7 @@ services:
       bootstrap:
         condition: service_completed_successfully
 
-  limbo-storage-discovery:
+  limbo-host-helper:
     image: ${LIMBO_IMAGE:-espressomatic/limbo:${LIMBO_CHANNEL:-latest}}
     pull_policy: always
     network_mode: host
@@ -471,7 +471,7 @@ services:
       - .env
     environment:
       LIMBO_DISCOVERY_HELPER_HOST: "${LIMBO_DISCOVERY_HELPER_HOST:-0.0.0.0}"
-      LIMBO_DISCOVERY_HELPER_PORT: "${LIMBO_DISCOVERY_HELPER_PORT:-4809}"
+      LIMBO_HOST_HELPER_PORT: "${LIMBO_HOST_HELPER_PORT:-4809}"
       LIMBO_INIT_STATE_DIR: "${LIMBO_INIT_STATE_DIR:-/metadata/limbo_data}"
       LIMBO_SECRET_DB_FILE: "${LIMBO_SECRET_DB_FILE:-/metadata/limbo_data/limbo-secrets.db}"
       LIMBO_SECRET_MASTER_KEY_FILE: "${LIMBO_SECRET_MASTER_KEY_FILE:-/metadata/limbo_data/limbo-secrets-master.key}"
@@ -623,7 +623,7 @@ services:
       <<: *assets_depends
       host-ip-preflight:
         condition: service_completed_successfully
-      limbo-storage-discovery:
+      limbo-host-helper:
         condition: service_started
       limbo-init:
         condition: service_completed_successfully
