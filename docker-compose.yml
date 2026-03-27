@@ -1,4 +1,4 @@
-#   Limbo 1.9.326.823
+#   Limbo 1.9.326.824
 # Description: Deploy compose file with managed assets sync
 
 x-assets-depends: &assets_depends
@@ -31,7 +31,7 @@ services:
     pull_policy: always
     environment:
       - LIMBO_ASSETS_FORCE_SYNC=${LIMBO_ASSETS_FORCE_SYNC:-1}
-      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.326.823
+      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.326.824
     volumes:
       - ./:/out
     restart: "no"
@@ -462,12 +462,36 @@ services:
       bootstrap:
         condition: service_completed_successfully
 
+  limbo-storage-discovery:
+    image: ${LIMBO_IMAGE:-espressomatic/limbo:${LIMBO_CHANNEL:-latest}}
+    pull_policy: always
+    network_mode: host
+    entrypoint: ["python3.14", "-m", "metadata_srv.storage_discovery_helper"]
+    env_file:
+      - .env
+    environment:
+      LIMBO_DISCOVERY_HELPER_HOST: "${LIMBO_DISCOVERY_HELPER_HOST:-0.0.0.0}"
+      LIMBO_DISCOVERY_HELPER_PORT: "${LIMBO_DISCOVERY_HELPER_PORT:-4818}"
+      LIMBO_INIT_STATE_DIR: "${LIMBO_INIT_STATE_DIR:-/metadata/limbo_data}"
+      LIMBO_SECRET_DB_FILE: "${LIMBO_SECRET_DB_FILE:-/metadata/limbo_data/limbo-secrets.db}"
+      LIMBO_SECRET_MASTER_KEY_FILE: "${LIMBO_SECRET_MASTER_KEY_FILE:-/metadata/limbo_data/limbo-secrets-master.key}"
+      LIMBO_SECRET_MASTER_KEY: "${LIMBO_SECRET_MASTER_KEY:-}"
+    volumes:
+      - limbo_data:/metadata/limbo_data
+    restart: unless-stopped
+    depends_on:
+      <<: *assets_depends
+      host-ip-preflight:
+        condition: service_completed_successfully
+
   limbo:
     image: ${LIMBO_IMAGE:-espressomatic/limbo:${LIMBO_CHANNEL:-latest}}
     pull_policy: always
     cap_add:
       - SYS_ADMIN
       - DAC_READ_SEARCH
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "${LIMBO_PORT:-4808}:4808"
     volumes:
@@ -573,6 +597,7 @@ services:
       LIMBO_LIDARR_LIBRARY_TOOL_STARTUP_DELAY_SECONDS: "${LIMBO_LIDARR_LIBRARY_TOOL_STARTUP_DELAY_SECONDS:-45}"
       LIMBO_LIDARR_LIBRARY_TOOL_HTTP_TIMEOUT_SECONDS: "${LIMBO_LIDARR_LIBRARY_TOOL_HTTP_TIMEOUT_SECONDS:-120}"
       LIMBO_LIDARR_LIBRARY_TOOL_BACKFILL_DEBOUNCE_SECONDS: "${LIMBO_LIDARR_LIBRARY_TOOL_BACKFILL_DEBOUNCE_SECONDS:-0.25}"
+      LIMBO_STORAGE_DISCOVERY_HELPER_URL: "${LIMBO_STORAGE_DISCOVERY_HELPER_URL:-http://host.docker.internal:4818}"
 
       # --- Redis ---
       REDIS_HOST: "${REDIS_HOST:-redis}"
@@ -598,6 +623,8 @@ services:
       <<: *assets_depends
       host-ip-preflight:
         condition: service_completed_successfully
+      limbo-storage-discovery:
+        condition: service_started
       limbo-init:
         condition: service_completed_successfully
       limbo-key-init:

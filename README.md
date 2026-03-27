@@ -82,6 +82,13 @@ You can optionally set the following variables if you want a different top-level
 - Set **LIMBO_SLSKD_INCOMPLETE_DOWNLOADS_MOUNT**
 - Set **LIMBO_SLSKD_SHARING_MOUNT**
 
+Storage server discovery (SMB/mDNS) now uses a host-network helper by default.
+These defaults are in `example.env` and normally should be left as-is:
+
+- `LIMBO_DISCOVERY_HELPER_HOST=0.0.0.0`
+- `LIMBO_DISCOVERY_HELPER_PORT=4818`
+- `LIMBO_STORAGE_DISCOVERY_HELPER_URL=http://host.docker.internal:4818`
+
 > [!TIP]
 >
 > When deploying from a terminal, use _screen_ or _tmux_ so the compose process can continue running if your session drops (closing the window, computer goes to sleep, etc.)
