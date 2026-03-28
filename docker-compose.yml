@@ -351,6 +351,8 @@ services:
       - LIMBO_ADMIN_NOTIFY_URL=${LIMBO_ADMIN_NOTIFY_URL:-http://limbo:4808/replication/notify}
       - LIMBO_ADMIN_NOTIFY_HEADER=${LIMBO_ADMIN_NOTIFY_HEADER:-X-Limbo-Key}
       - LIMBO_ADMIN_NOTIFY_TIMEOUT=${LIMBO_ADMIN_NOTIFY_TIMEOUT:-5}
+      - LIMBO_ADMIN_SECRET_DB_FILE=${LIMBO_ADMIN_SECRET_DB_FILE:-/metadata/limbo_data/limbo-secrets.db}
+      - LIMBO_ADMIN_SECRET_MASTER_KEY_FILE=${LIMBO_ADMIN_SECRET_MASTER_KEY_FILE:-/metadata/limbo_data/limbo-secrets-master.key}
       - LIMBO_ADMIN_LOCK=${LIMBO_ADMIN_LOCK:-/tmp/replication.pid}
       - LIMBO_ADMIN_REPL_SCRIPT=${LIMBO_ADMIN_REPL_SCRIPT:-/usr/local/bin/replication.sh}
       - MUSICBRAINZ_USE_PROXY=1
