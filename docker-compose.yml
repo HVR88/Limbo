@@ -1,4 +1,4 @@
-#   Limbo 1.9.328.847
+#   Limbo 1.9.328.848
 # Description: Deploy compose file with managed assets sync
 #
 # THIS FILE IS REGULARLY OVERWRITTEN: It can't be modified nor manually maintained - leave it alone
@@ -103,7 +103,7 @@ services:
     image: *image_assets
     pull_policy: always
     environment:
-      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.328.847
+      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.328.848
     volumes:
       - ./:/out
     restart: "no"
@@ -199,7 +199,7 @@ services:
     ports:
       - "${SLSKD_WEB_SERVER_PORT:-5030}:5030"
       - "${SLSKD_HTTPS_SERVER_PORT:-5031}:5031"
-      - "${SLSKD_SLSK_PORT:-50300}:50300"
+      - "${SOULSEEK_INBOUND_PORT:-50300}:50300"
     env_file: *env_files_runtime
     environment:
       TZ: *default_tz
