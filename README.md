@@ -6,20 +6,22 @@
 
 ## Introduction
 
-Limbo is a multi-purpose tool and download manager for Lidarr. It contains a full MusicBrainz mirror server with fast, easy and automated installation. No plugins or settings need to be changed in Lidarr.
+Limbo is a web-based music library toolset and download manager, currently supporting the Lidarr music manager. It contains a full MusicBrainz mirror server with fast, easy and automated installation. No plugins or settings need to be changed in Lidarr to use Limbo.
 
-Limbo packages the Lidarr Metadata API and bridges queries to the mirror database directly, providing local access to all metadata. No online Lidarr databases, "cache-warming" or other nonsense. Just fast LAN-based performance.
+Based on the Lidarr Metadata API, coupled with a customized MusicBrainz database, multi-source metadata system, download/import manager and other features.
 
 _You say that you don't want vinyl formats in releases? No problem, filter that out._
 
-From the Limbo WebUI, you can filter/modify media formats for all releases, set up additional data providers (not normally supported by Lidarr) and fix artwork downloading for those it already supports.
+From the Limbo web interface, you can filter/modify media formats for all releases, track multiple versions of the same album in Lidarr, set up additional data providers, inclduing login-less free options, and more.
 
 **Currently implemented features:**
 
 - Library Statistics
 - Release filtering (block specific media formats: vinyl, tape, etc.)
 - Release / Artist refreshing (paste URL/ID single/bulk and refrecs albums/artists)
-- Expanded Art + Data providers selection, with drag & drop priority order
+- Artist Photos, Cover Art + Data providers selection, with drag & drop priority
+- One-shot bulk artwork search with direct Lidarr DB access (partial)
+- Lidarr task/process control (partial - API (carrot) and direct (stick))
 - Automated / Manual Download Manager (partial - slskd)
 
 Other features are currently in development or testing. Update notifications are displayed at the bottom of the Limbo WebUI.
@@ -80,6 +82,13 @@ You can optionally set the following variables if you want a different top-level
 - Set **LIMBO_SLSKD_INCOMPLETE_DOWNLOADS_MOUNT**
 - Set **LIMBO_SLSKD_SHARING_MOUNT**
 
+Storage server discovery and host-IP runtime derivation now use a host-network helper by default.
+These defaults are in `example.env` and normally should be left as-is:
+
+- `LIMBO_DISCOVERY_HELPER_HOST=0.0.0.0`
+- `LIMBO_HOST_HELPER_PORT=4809`
+- `LIMBO_STORAGE_DISCOVERY_HELPER_URL=http://host.docker.internal:4809`
+
 > [!TIP]
 >
 > When deploying from a terminal, use _screen_ or _tmux_ so the compose process can continue running if your session drops (closing the window, computer goes to sleep, etc.)
@@ -89,6 +98,12 @@ You can optionally set the following variables if you want a different top-level
 ```
 docker compose up -d
 ```
+
+> [!NOTE]
+>
+> Limbo init-state volume is now `limbo_data`. Existing installs using the legacy
+> `limbo_bridge_init_state` volume are migrated automatically on startup. The
+> in-container state path is now `/metadata/limbo_data`.
 
 ## Wrap-Up
 
@@ -108,11 +123,11 @@ docker compose logs -f --no-log-prefix --tail=200 \
 
 ## Browser Access / Status
 
-**Limbo** web UI: **http://HOST_IP:5001**
+**Limbo** web UI: **http://HOST_IP:4808**
 
 **SLSKD** web UI: **http://HOST_IP:5030** (HTTPS: `5031`)
 
-**MusicBrainz** local web site: **http://HOST_IP:5000**
+**MusicBrainz** local web site: **http://HOST_IP:4815**
 <br>(Off by default, enable it in Limbo Provider Settings)
 
 > [!TIP]
@@ -124,6 +139,14 @@ docker compose logs -f --no-log-prefix --tail=200 \
 The `.env` file is user-maintained and won't be changed when updating. Updating will refresh all other managed files automatically: admin scripts,
 compose template, and defaults, including _example.env._
 
+Deploy source-of-truth files in this repo now live at root:
+
+- `docker-compose.yml`
+- `example.env`
+- `README.md`
+
+Deploy helper scripts for the target `admin/` folder are maintained under `deploy-admin/` in this repo and are synced to `admin/` at deploy/runtime.
+
 ### Regular update
 
 Pull the latest images and restart:
@@ -132,6 +155,15 @@ Pull the latest images and restart:
 docker compose pull
 docker compose up -d
 ```
+
+If you want MusicBrainz to remain permanently fixed (no automatic refresh), pin it to an immutable digest in `.env` and disable pulling for that service:
+
+```bash
+MUSICBRAINZ_IMAGE=espressomatic/limbo-musicbrainz:test@sha256:<digest>
+MUSICBRAINZ_PULL_POLICY=never
+```
+
+With that pin in place, regular `docker compose pull` / `docker compose up -d` updates will keep your existing MusicBrainz image indefinitely until you intentionally change the digest.
 
 ### Major update (with new components, etc.)
 
@@ -150,7 +182,7 @@ You should also look in the _`example.env`_ file for updates that may need to be
 
 **WORK IN PROGRESS**
 
-Go to **http://<your_LIMBO_IP>:5001**
+Go to **http://<your_LIMBO_IP>:4808**
 
 _**Use the SETTINGS button on the top right of the webUI to configure your Lidarr IP address, port and API KEY. The API Key can be found in Lidarr's Settings -> General page.**_
 
@@ -162,10 +194,6 @@ _**Use the SETTINGS button on the top right of the webUI to configure your Lidar
 > [!NOTE]
 >
 > Limbo is for personal use only
-
-### Source code, licenses and development repo:
-
-https://github.com/HVR88/DEV_Limbo-Stack
 
 ## Maintenance (optional)
 
@@ -181,3 +209,4 @@ Additional helper scripts are synced into `admin/` automatically when the stack 
 - `admin/soulseek-auth-set --rotate [--json]` (roll and apply a generated Soulseek username/password)
 - `admin/soulseek-auth-set --username <name> [--password <pass>] [--json]` (pre-validates Soulseek login before apply; returns error instead of rotating on failure)
 - `admin/bootstrap-reset` (clear bootstrap markers; prompts for confirmation)
+- `admin/retire-limbo-bridge [--apply] [--prune-images]` (migrate deprecated `limbo-bridge` image references to canonical `limbo`, with stale-container cleanup)
