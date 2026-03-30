@@ -1,4 +1,4 @@
-#   Limbo 1.9.330.871
+#   Limbo 1.9.330.873
 # Description: Deploy compose file with managed assets sync
 #
 # THIS FILE IS REGULARLY OVERWRITTEN: It can't be modified nor manually maintained - leave it alone
@@ -52,9 +52,9 @@ x-images:
   mq: &image_mq ${LIMBO_DOCKERHUB_NAMESPACE:-espressomatic}/${LIMBO_DOCKERHUB_REPO_PREFIX:-limbo}-mq:${LIMBO_CHANNEL:-latest}
   bootstrap: &image_bootstrap ${LIMBO_DOCKERHUB_NAMESPACE:-espressomatic}/${LIMBO_DOCKERHUB_REPO_PREFIX:-limbo}-bootstrap:${LIMBO_CHANNEL:-latest}
   musicbrainz: &image_musicbrainz ${MUSICBRAINZ_IMAGE:-${LIMBO_DOCKERHUB_NAMESPACE:-espressomatic}/${LIMBO_DOCKERHUB_REPO_PREFIX:-limbo}-musicbrainz:${LIMBO_CHANNEL:-latest}}
+  dldr: &image_dldr ${DLDR_IMAGE:-${LIMBO_DOCKERHUB_NAMESPACE:-espressomatic}/${LIMBO_DOCKERHUB_REPO_PREFIX:-limbo}-dldr:${LIMBO_CHANNEL:-latest}}
   search: &image_search ${LIMBO_DOCKERHUB_NAMESPACE:-espressomatic}/${LIMBO_DOCKERHUB_REPO_PREFIX:-limbo}-search:${LIMBO_CHANNEL:-latest}
   indexer: &image_indexer ${LIMBO_DOCKERHUB_NAMESPACE:-espressomatic}/${LIMBO_DOCKERHUB_REPO_PREFIX:-limbo}-indexer:${LIMBO_CHANNEL:-latest}
-  dldr: &image_dldr ${DLDR_IMAGE:-${LIMBO_DOCKERHUB_NAMESPACE:-espressomatic}/${LIMBO_DOCKERHUB_REPO_PREFIX:-limbo}-dldr:${LIMBO_CHANNEL:-latest}}
 x-env-files:
   runtime: &env_files_runtime
     - path: ./.env
@@ -101,9 +101,6 @@ volumes:
   limbo_data:
     name: limbo_data
     driver: local
-  dldr_data:
-    name: dldr_data
-    driver: local
   limbo_bridge_init_state:
     name: limbo_bridge_init_state
     driver: local
@@ -112,7 +109,7 @@ services:
     image: *image_assets
     pull_policy: always
     environment:
-      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.330.871
+      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.330.873
     volumes:
       - ./:/out
     restart: "no"
@@ -350,40 +347,29 @@ services:
           create_host_path: true
     restart: unless-stopped
     depends_on: *assets_depends
-  dldr-core:
+  dldr:
     image: *image_dldr
     pull_policy: always
-    container_name: dldr-core
-    hostname: dldr-core
-    restart: unless-stopped
-    command: ["${DLDR_COMMAND:-/app/scripts/dldr-stack.sh}"]
     ports:
-      - "${DLDR_WEB_PORT:-4812}:4812"
+      - "${LIMBO_DLDR_API_PORT:-4812}:4812"
+      - "${LIMBO_DLDR_INBOUND_PORT:-50300}:50300"
+    env_file: *env_files_runtime
     environment:
       - TZ=${TZ:-UTC}
-      - DLDR_LOG_LEVEL=${DLDR_LOG_LEVEL:-INFO}
       - DLDR_API_KEY=${DLDR_API_KEY:-dldr-default-key-change-me}
-      - DLDR_STARTUP_STAGER=${DLDR_STARTUP_STAGER:-true}
-      - DLDR_STARTUP_SEARCH=${DLDR_STARTUP_SEARCH:-true}
-      - DLDR_STARTUP_DOWNLOADER=${DLDR_STARTUP_DOWNLOADER:-true}
-      - DLDR_STARTUP_IMPORTER=${DLDR_STARTUP_IMPORTER:-true}
-      # Optional env seed for integration settings (API settings take precedence)
-      - DLDR_INTEGRATION_LIDARR_HOST_URL=${DLDR_INTEGRATION_LIDARR_HOST_URL:-}
-      - DLDR_INTEGRATION_LIDARR_API_KEY=${DLDR_INTEGRATION_LIDARR_API_KEY:-}
-      - DLDR_INTEGRATION_LIDARR_PATH_TO_SLSKD_DL=${DLDR_INTEGRATION_LIDARR_PATH_TO_SLSKD_DL:-}
-      # Optional env seed for primary download source settings (API settings take precedence)
-      - DLDR_SLSKD_HOST_URL=${DLDR_SLSKD_HOST_URL:-}
-      - DLDR_SLSKD_API_KEY=${DLDR_SLSKD_API_KEY:-}
-      - DLDR_PATH_TO_SLSKD_DL=/downloads
-      - DLDR_SUB_FOLDER=${DLDR_SUB_FOLDER:-Limbo_DLDR}
+      - DLDR_CORE_DB_PATH=/data/dldr-core.db
+      - DLDR_STARTUP_STATE_PATH=/data/.control/startup.state
+      - DLDR_INTEGRATION=${DLDR_INTEGRATION:-lidarr}
     volumes:
-      - dldr_data:/data
+      - limbo_data:/data
       - type: bind
-        source: ${DLDR_PATH_TO_SLSKD_DL:-./admin/.limbo/dldr-downloads}
+        source: ${LIMBO_DLDR_PARENT_FOLDER:-./downloads}
         target: /downloads
         bind:
           create_host_path: true
-    depends_on: *assets_depends
+    restart: unless-stopped
+    depends_on:
+      <<: [*assets_depends, *dep_limbo_key_init_completed]
   limbo:
     image: *image_limbo
     pull_policy: always
