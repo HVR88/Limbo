@@ -64,8 +64,17 @@ x-default-values:
   tz: &default_tz "${TZ:-UTC}"
   limbo_username: &default_limbo_username "${LIMBO_USERNAME:-limbo}"
   limbo_password: &default_limbo_password "${LIMBO_PASSWORD:-limbo}"
+  limbo_port: &default_limbo_port "${LIMBO_PORT}"
+  limbo_host_helper_port: &default_limbo_host_helper_port "${LIMBO_HOST_HELPER_PORT}"
+  limbo_dldr_api_port: &default_limbo_dldr_api_port "${LIMBO_DLDR_API_PORT}"
+  limbo_admin_port: &default_limbo_admin_port "${LIMBO_ADMIN_PORT}"
+  limbo_redis_port: &default_limbo_redis_port "${LIMBO_REDIS_PORT}"
+  musicbrainz_web_port: &default_musicbrainz_web_port "${LIMBO_MBRAINZ_WEB_PORT}"
+  limbo_mq_port: &default_limbo_mq_port "${LIMBO_MQ_PORT}"
+  limbo_solr_port: &default_limbo_solr_port "${LIMBO_SOLR_PORT}"
+  limbo_mbdb_port: &default_limbo_mbdb_port "${LIMBO_MBDB_PORT}"
   mb_db_host: &default_mb_db_host "${MB_DB_HOST:-db}"
-  mb_db_port: &default_mb_db_port "${MB_DB_PORT:-4818}"
+  mb_db_port: &default_mb_db_port "${LIMBO_MBDB_PORT}"
   mb_db_user: &default_mb_db_user "${MB_DB_USER:-musicbrainz}"
   mb_db_password: &default_mb_db_password "${MB_DB_PASSWORD:-musicbrainz}"
   mb_db_name: &default_mb_db_name "${MB_DB_NAME:-musicbrainz_db}"
@@ -74,14 +83,16 @@ x-default-values:
   limbo_cache_password: &default_limbo_cache_password "${LIMBO_CACHE_PASSWORD:-limbo}"
 x-default-env-items:
   tz: &default_env_tz "TZ=${TZ:-UTC}"
-  pg_user: &default_env_pg_user "POSTGRES_USER=${MB_DB_USER:-musicbrainz}"
-  pg_password: &default_env_pg_password "POSTGRES_PASSWORD=${MB_DB_PASSWORD:-musicbrainz}"
-  pg_port: &default_env_pg_port "PGPORT=${MB_DB_PORT:-4818}"
-  postgres_port: &default_env_postgres_port "POSTGRES_PORT=${MB_DB_PORT:-4818}"
-  db_port: &default_env_db_port "DB_PORT=${MB_DB_PORT:-4818}"
+  mbdb_port: &default_env_mbdb_port "LIMBO_MBDB_PORT=${LIMBO_MBDB_PORT}"
+  pg_user: &default_env_pg_user "POSTGRES_USER=${MB_DB_USER}"
+  pg_password: &default_env_pg_password "POSTGRES_PASSWORD=${MB_DB_PASSWORD}"
+  pg_port: &default_env_pg_port "PGPORT=${LIMBO_MBDB_PORT}"
+  postgres_port: &default_env_postgres_port "POSTGRES_PORT=${LIMBO_MBDB_PORT}"
+  db_port: &default_env_db_port "DB_PORT=${LIMBO_MBDB_PORT}"
 x-env-lists:
   pg_runtime: &env_list_pg_runtime
     - *default_env_tz
+    - *default_env_mbdb_port
     - *default_env_pg_user
     - *default_env_pg_password
     - *default_env_pg_port
@@ -159,13 +170,13 @@ services:
         max-size: "10m"
         max-file: "10"
     restart: unless-stopped
-    command: postgres -c "port=${MB_DB_PORT:-4818}" -c "shared_buffers=${POSTGRES_SHARED_BUFFERS:-4GB}" -c "shared_preload_libraries=pg_amqp.so"
+    command: postgres -c "port=${LIMBO_MBDB_PORT}" -c "shared_buffers=${POSTGRES_SHARED_BUFFERS:-4GB}" -c "shared_preload_libraries=pg_amqp.so"
     environment: *env_list_pg_runtime
     shm_size: "${POSTGRES_SHM_SIZE:-4GB}"
     volumes:
       - pgdata:/var/lib/postgresql/data
     expose:
-      - "${MB_DB_PORT:-4818}"
+      - "${LIMBO_MBDB_PORT}"
     depends_on: *assets_depends
   mq:
     image: *image_mq
@@ -183,7 +194,7 @@ services:
     volumes:
       - mqdata:/var/lib/rabbitmq
     expose:
-      - "5672"
+      - *default_limbo_mq_port
     depends_on: *assets_depends
   redis:
     image: redis:3-alpine
@@ -194,10 +205,10 @@ services:
         max-file: "10"
     environment:
       - *default_env_tz
-    command: ["redis-server", "--port", "${REDIS_PORT:-4819}"]
+    command: ["redis-server", "--port", "${LIMBO_REDIS_PORT}"]
     restart: unless-stopped
     expose:
-      - "${REDIS_PORT:-4819}"
+      - "${LIMBO_REDIS_PORT}"
     depends_on: *assets_depends
   bootstrap:
     image: *image_bootstrap
@@ -239,7 +250,7 @@ services:
       - SOLR_HEAP=${SOLR_HEAP:-4g}
       - LOG4J_FORMAT_MSG_NO_LOOKUPS=true
     expose:
-      - "8983"
+      - *default_limbo_solr_port
     volumes:
       - dbdump:/media/dbdump:ro
       - solrdata:/var/solr
@@ -255,7 +266,7 @@ services:
         max-size: "50m"
         max-file: "50"
     ports:
-      - "${MUSICBRAINZ_DOCKER_HOST_IPADDRCOL:-}${MUSICBRAINZ_WEB_SERVER_PORT:-4820}:${MUSICBRAINZ_WEB_SERVER_PORT:-4820}"
+      - "${MUSICBRAINZ_DOCKER_HOST_IPADDRCOL:-}${LIMBO_MBRAINZ_WEB_PORT}:${LIMBO_MBRAINZ_WEB_PORT}"
     volumes:
       - dbdump:/media/dbdump
       - solrdump:/var/cache/musicbrainz/solr-backups:ro
@@ -274,7 +285,7 @@ services:
       - *default_env_pg_password
       - MUSICBRAINZ_USE_PROXY=1
       - STATIC_RESOURCES_LOCATION=/static/build
-      - LIMBO_ADMIN_PORT=${LIMBO_ADMIN_PORT:-4815}
+      - LIMBO_ADMIN_PORT=${LIMBO_ADMIN_PORT}
       - LIMBO_ADMIN_WEB_START_SCRIPT=/opt/limbo-admin/web-server-start.sh
       - LIMBO_ADMIN_WEB_STOP_SCRIPT=/opt/limbo-admin/web-server-stop.sh
       - LIMBO_ADMIN_WEB_STATUS_SCRIPT=/opt/limbo-admin/web-server-status.sh
@@ -325,6 +336,8 @@ services:
       MB_DB_PORT: *default_mb_db_port
       MB_DB_USER: *default_mb_db_user
       MB_DB_PASSWORD: *default_mb_db_password
+      LIMBO_MBDB_USER: *default_mb_db_user
+      LIMBO_MBDB_PASSWORD: *default_mb_db_password
       MB_DB_NAME: *default_mb_db_name
       LIMBO_CACHE_DB: *default_limbo_cache_db
       LIMBO_CACHE_USER: *default_limbo_cache_user
@@ -339,7 +352,7 @@ services:
     entrypoint: ["python3.14", "-m", "metadata_srv.storage_discovery_helper"]
     env_file: *env_files_runtime
     environment:
-      LIMBO_HOST_HELPER_PORT: "${LIMBO_HOST_HELPER_PORT:-4809}"
+      LIMBO_HOST_HELPER_PORT: *default_limbo_host_helper_port
       LIMBO_SECRET_MASTER_KEY: "${LIMBO_SECRET_MASTER_KEY:-}"
     volumes:
       - limbo_data:/metadata/limbo_data
@@ -358,10 +371,11 @@ services:
     restart: unless-stopped
     command: ["${DLDR_COMMAND:-/app/scripts/DLDR-start.core.sh}"]
     ports:
-      - "${DLDR_WEB_PORT:-4812}:4812"
+      - "${LIMBO_DLDR_API_PORT}:${LIMBO_DLDR_API_PORT}"
     environment:
       - TZ=${TZ:-UTC}
       - DLDR_LOG_LEVEL=${DLDR_LOG_LEVEL:-INFO}
+      - DLDR_WEB_PORT=${LIMBO_DLDR_API_PORT}
       - DLDR_API_KEY=${DLDR_API_KEY:-dldr-default-key-change-me}
       - DLDR_STARTUP_STAGER=${DLDR_STARTUP_STAGER:-true}
       - DLDR_STARTUP_SEARCH=${DLDR_STARTUP_SEARCH:-true}
@@ -388,7 +402,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
-      - "${LIMBO_PORT:-4808}:4808"
+      - "${LIMBO_PORT}:${LIMBO_PORT}"
     volumes:
       - limbo_data:/metadata/limbo_data
       - dbdump:/media/dbdump:ro
@@ -409,10 +423,10 @@ services:
     env_file: *env_files_runtime
     environment:
       TZ: *default_tz
-      REDIS_PORT: "${REDIS_PORT:-4819}"
+      LIMBO_REDIS_PORT: *default_limbo_redis_port
       POSTGRES_CACHE_HOST: *default_mb_db_host
       POSTGRES_CACHE_PORT: *default_mb_db_port
-      LIMBO_ADMIN_BASE_URL: "http://musicbrainz:${LIMBO_ADMIN_PORT:-4815}"
+      LIMBO_ADMIN_BASE_URL: "http://musicbrainz:${LIMBO_ADMIN_PORT}"
       LIMBO_VERSION_FILE: "/limbo/VERSION"
       # --- MusicBrainz DB creds (set these to match your mirror) ---
       PROVIDERS__MUSICBRAINZDBPROVIDER__1__DB_HOST: *default_mb_db_host
