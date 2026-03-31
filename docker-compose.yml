@@ -1,4 +1,4 @@
-#   Limbo 1.9.331.888
+#   Limbo 1.9.331.891
 # Description: Deploy compose file with managed assets sync
 #
 # THIS FILE IS REGULARLY OVERWRITTEN: It can't be modified nor manually maintained - leave it alone
@@ -65,7 +65,7 @@ x-default-values:
   limbo_username: &default_limbo_username "${LIMBO_USERNAME:-limbo}"
   limbo_password: &default_limbo_password "${LIMBO_PASSWORD:-limbo}"
   mb_db_host: &default_mb_db_host "${MB_DB_HOST:-db}"
-  mb_db_port: &default_mb_db_port "${MB_DB_PORT:-5432}"
+  mb_db_port: &default_mb_db_port "${MB_DB_PORT:-4818}"
   mb_db_user: &default_mb_db_user "${MB_DB_USER:-musicbrainz}"
   mb_db_password: &default_mb_db_password "${MB_DB_PASSWORD:-musicbrainz}"
   mb_db_name: &default_mb_db_name "${MB_DB_NAME:-musicbrainz_db}"
@@ -76,9 +76,9 @@ x-default-env-items:
   tz: &default_env_tz "TZ=${TZ:-UTC}"
   pg_user: &default_env_pg_user "POSTGRES_USER=${MB_DB_USER:-musicbrainz}"
   pg_password: &default_env_pg_password "POSTGRES_PASSWORD=${MB_DB_PASSWORD:-musicbrainz}"
-  pg_port: &default_env_pg_port "PGPORT=${MB_DB_PORT:-5432}"
-  postgres_port: &default_env_postgres_port "POSTGRES_PORT=${MB_DB_PORT:-5432}"
-  db_port: &default_env_db_port "DB_PORT=${MB_DB_PORT:-5432}"
+  pg_port: &default_env_pg_port "PGPORT=${MB_DB_PORT:-4818}"
+  postgres_port: &default_env_postgres_port "POSTGRES_PORT=${MB_DB_PORT:-4818}"
+  db_port: &default_env_db_port "DB_PORT=${MB_DB_PORT:-4818}"
 x-env-lists:
   pg_runtime: &env_list_pg_runtime
     - *default_env_tz
@@ -112,7 +112,7 @@ services:
     image: *image_assets
     pull_policy: always
     environment:
-      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.331.888
+      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.331.891
     volumes:
       - ./:/out
     restart: "no"
@@ -159,13 +159,13 @@ services:
         max-size: "10m"
         max-file: "10"
     restart: unless-stopped
-    command: postgres -c "port=${MB_DB_PORT:-5432}" -c "shared_buffers=${POSTGRES_SHARED_BUFFERS:-4GB}" -c "shared_preload_libraries=pg_amqp.so"
+    command: postgres -c "port=${MB_DB_PORT:-4818}" -c "shared_buffers=${POSTGRES_SHARED_BUFFERS:-4GB}" -c "shared_preload_libraries=pg_amqp.so"
     environment: *env_list_pg_runtime
     shm_size: "${POSTGRES_SHM_SIZE:-4GB}"
     volumes:
       - pgdata:/var/lib/postgresql/data
     expose:
-      - "${MB_DB_PORT:-5432}"
+      - "${MB_DB_PORT:-4818}"
     depends_on: *assets_depends
   mq:
     image: *image_mq
@@ -194,10 +194,10 @@ services:
         max-file: "10"
     environment:
       - *default_env_tz
-    command: ["redis-server", "--port", "${REDIS_PORT:-6379}"]
+    command: ["redis-server", "--port", "${REDIS_PORT:-4819}"]
     restart: unless-stopped
     expose:
-      - "${REDIS_PORT:-6379}"
+      - "${REDIS_PORT:-4819}"
     depends_on: *assets_depends
   bootstrap:
     image: *image_bootstrap
@@ -255,7 +255,7 @@ services:
         max-size: "50m"
         max-file: "50"
     ports:
-      - "${MUSICBRAINZ_DOCKER_HOST_IPADDRCOL:-}${MUSICBRAINZ_WEB_SERVER_PORT:-4815}:${MUSICBRAINZ_WEB_SERVER_PORT:-4815}"
+      - "${MUSICBRAINZ_DOCKER_HOST_IPADDRCOL:-}${MUSICBRAINZ_WEB_SERVER_PORT:-4820}:${MUSICBRAINZ_WEB_SERVER_PORT:-4820}"
     volumes:
       - dbdump:/media/dbdump
       - solrdump:/var/cache/musicbrainz/solr-backups:ro
@@ -370,16 +370,11 @@ services:
       # Optional env seed for integration settings (API settings take precedence)
       - DLDR_INTEGRATION_LIDARR_HOST_URL=${DLDR_INTEGRATION_LIDARR_HOST_URL:-}
       - DLDR_INTEGRATION_LIDARR_API_KEY=${DLDR_INTEGRATION_LIDARR_API_KEY:-}
-      - DLDR_INTEGRATION_LIDARR_PATH_TO_SLSKD_DL=${DLDR_INTEGRATION_LIDARR_PATH_TO_SLSKD_DL:-}
-      # Optional env seed for primary download source settings (API settings take precedence)
-      - DLDR_SLSKD_HOST_URL=${DLDR_SLSKD_HOST_URL:-}
-      - DLDR_SLSKD_API_KEY=${DLDR_SLSKD_API_KEY:-}
-      - DLDR_PATH_TO_SLSKD_DL=/downloads
       - DLDR_SUB_FOLDER=${DLDR_SUB_FOLDER:-Limbo_DLDR}
     volumes:
       - dldr_data:/data
       - type: bind
-        source: ${DLDR_PATH_TO_SLSKD_DL:-./admin/.limbo/dldr-downloads}
+        source: ./admin/.limbo/dldr-downloads
         target: /downloads
         bind:
           create_host_path: true
@@ -414,7 +409,7 @@ services:
     env_file: *env_files_runtime
     environment:
       TZ: *default_tz
-      REDIS_PORT: "${REDIS_PORT:-6379}"
+      REDIS_PORT: "${REDIS_PORT:-4819}"
       POSTGRES_CACHE_HOST: *default_mb_db_host
       POSTGRES_CACHE_PORT: *default_mb_db_port
       LIMBO_ADMIN_BASE_URL: "http://musicbrainz:${LIMBO_ADMIN_PORT:-4815}"
