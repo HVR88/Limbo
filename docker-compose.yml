@@ -1,4 +1,4 @@
-#   Limbo 1.9.401.930
+#   Limbo 1.9.405.983
 # Description: Deploy compose file with managed assets sync
 #
 # THIS FILE IS REGULARLY OVERWRITTEN: It can't be modified nor manually maintained - leave it alone
@@ -72,6 +72,8 @@ x-default-values:
   musicbrainz_web_port: &default_musicbrainz_web_port "${LIMBO_MBRAINZ_WEB_PORT}"
   limbo_mq_port: &default_limbo_mq_port "${LIMBO_MQ_PORT}"
   limbo_solr_port: &default_limbo_solr_port "${LIMBO_SOLR_PORT}"
+  search_mem_limit: &default_search_mem_limit "${SEARCH_MEM_LIMIT:-4g}"
+  search_bootstrap_mem_limit: &default_search_bootstrap_mem_limit "${SEARCH_BOOTSTRAP_MEM_LIMIT:-8g}"
   limbo_mbdb_port: &default_limbo_mbdb_port "${LIMBO_MBDB_PORT}"
   mb_db_host: &default_mb_db_host "${MB_DB_HOST:-db}"
   mb_db_port: &default_mb_db_port "${LIMBO_MBDB_PORT}"
@@ -125,7 +127,7 @@ services:
     image: *image_assets
     pull_policy: always
     environment:
-      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.401.930
+      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.405.983
     volumes:
       - ./:/out
     restart: "no"
@@ -226,6 +228,7 @@ services:
   search-bootstrap:
     image: *image_search
     entrypoint: ["/usr/local/bin/bootstrap-indexes.sh"]
+    mem_limit: *default_search_bootstrap_mem_limit
     env_file: *env_files_runtime
     environment:
       - TZ=${TZ:-UTC}
@@ -240,6 +243,7 @@ services:
       <<: [*assets_depends, *dep_preflight_completed, *dep_bootstrap_completed]
   search:
     image: *image_search
+    mem_limit: *default_search_mem_limit
     logging:
       driver: "json-file"
       options:
