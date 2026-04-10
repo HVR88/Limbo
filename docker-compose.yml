@@ -1,4 +1,4 @@
-#   Limbo 1.9.409.1053
+#   Limbo 1.9.410.1062
 # Description: Deploy compose file with managed assets sync
 #
 # THIS FILE IS REGULARLY OVERWRITTEN: It can't be modified nor manually maintained - leave it alone
@@ -127,7 +127,7 @@ services:
     image: *image_assets
     pull_policy: always
     environment:
-      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.409.1053
+      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.410.1062
     volumes:
       - ./:/out
     restart: "no"
@@ -257,7 +257,7 @@ services:
       - SOLR_HEAP=${SOLR_HEAP:-4g}
       - SOLR_PORT=${LIMBO_SOLR_PORT}
       - LOG4J_FORMAT_MSG_NO_LOOKUPS=true
-    command: ["solr-foreground", "-p", "${LIMBO_SOLR_PORT}"]
+    command: ["solr-foreground", "--cloud", "-p", "${LIMBO_SOLR_PORT}"]
     expose:
       - *default_limbo_solr_port
     volumes:
