@@ -1,5 +1,5 @@
 <p align="center" style="white-space: nowrap;">
-  <img src="https://raw.githubusercontent.com/HVR88/Docs-Extras/master/LimboLogo.png" alt="Limbo" width="360" />
+  <img src="https://raw.githubusercontent.com/HVR88/Docs-Extras/refs/heads/master/limbo-logo.svg" alt="Limbo" width="360" />
 </p>
 
 # <p align="center"><sub>**_Lidarr Tools | Downloader | Data Server_**</sub></p>
@@ -15,6 +15,7 @@ Limbo is a toolset and downloader for Lidarr music manager. It contains a full M
 - Release / Artist refreshing (paste URL/ID single/bulk and refresh albums/artists)
 - Artist Photos, Cover Art + Data providers selection, with drag & drop precedence
 - Lidarr control API - start/stop/restart/update Lidarr, cancel/pause scheduler tasks
+- Lidarr theme system incorporating default themes + Theme.Park.dev with community options
 - SMB network browser and path mounting - you don't edit env files
 
 **Features in testing:**
@@ -28,7 +29,7 @@ Limbo is a toolset and downloader for Lidarr music manager. It contains a full M
 Other features are currently in development or testing. Update notifications are displayed at the bottom of the Limbo WebUI.
 
 <p align="center">
-  <img src="https://github.com/HVR88/Docs-Extras/blob/master/Limbo-open-1.9.227.png?raw=true" alt="Limbo" width="600" />
+  <img src="https://github.com/HVR88/Docs-Extras/blob/master/limbo-info-screen.png?raw=true" alt="Limbo" width="600" />
 </p>
 
 ## Requirements
@@ -108,22 +109,9 @@ docker compose logs -f --no-log-prefix --tail=200 \
 >
 > Put a reverse proxy (NPM, Caddy, Traefik, SWAG) in front of your host IP and use your own (sub)domains to reach Limbo and MusicBrainz locally on port 80 (HTTP) or 443 (HTTPS) (requries a unique host name per service, like limbo.yourdomain.net and mbrainz.yourdomain.net)
 
-## Updates
-
-The `.env` file is user-maintained and won't be changed when updating. Updating will refresh all other managed files automatically: admin scripts,
-compose template, and defaults, including _example.env._
-
-Deploy source-of-truth files in this repo now live at root:
-
-- `docker-compose.yml`
-- `example.env`
-- `README.md`
-
-Deploy helper scripts for the target `admin/` folder are maintained under `deploy-admin/` in this repo and are synced to `admin/` at deploy/runtime.
-
 ### Updating
 
-Pull the latest images and restart two times:
+Pull the latest images and restart two times (the first time installs updated compose file, second time uses the updatec file to put up the containers):
 
 ```
 docker compose pull
@@ -131,7 +119,15 @@ docker compose up -d
 docker compose up -d
 ```
 
-You should also look in the _`example.env`_ file for updates that may need to be applied to `.env` - if there are new required variables, you should get a warning on the second compose up.
+The `.env` file is user-maintained and won't be changed when updating. Updating will refresh all other managed files automatically: admin scripts, compose template, and defaults, including _example.env._
+
+You should look in the _`example.env`_ file for any changes that may need to be applied to `.env` - if there are new required variables, you should get a warning on the second compose up.
+
+These files are automatically updated on every _docker compose up_
+
+- `docker-compose.yml`
+- `example.env`
+- `README.md`
 
 ## Limbo Configuration
 
