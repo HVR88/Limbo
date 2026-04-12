@@ -1,5 +1,5 @@
 <p align="center" style="white-space: nowrap;">
-  <img src="https://raw.githubusercontent.com/HVR88/Docs-Extras/master/LimboLogo.png" alt="Limbo" width="360" />
+  <img src="https://raw.githubusercontent.com/HVR88/Docs-Extras/refs/heads/master/limbo-logo.svg" alt="Limbo" width="360" />
 </p>
 
 # <p align="center"><sub>**_Lidarr Tools | Downloader | Data Server_**</sub></p>
@@ -15,6 +15,7 @@ Limbo is a toolset and downloader for Lidarr music manager. It contains a full M
 - Release / Artist refreshing (paste URL/ID single/bulk and refresh albums/artists)
 - Artist Photos, Cover Art + Data providers selection, with drag & drop precedence
 - Lidarr control API - start/stop/restart/update Lidarr, cancel/pause scheduler tasks
+- Lidarr theme system incorporating default themes + Theme.Park.dev with community options
 - SMB network browser and path mounting - you don't edit env files
 
 **Features in testing:**
@@ -28,7 +29,7 @@ Limbo is a toolset and downloader for Lidarr music manager. It contains a full M
 Other features are currently in development or testing. Update notifications are displayed at the bottom of the Limbo WebUI.
 
 <p align="center">
-  <img src="https://github.com/HVR88/Docs-Extras/blob/master/Limbo-open-1.9.227.png?raw=true" alt="Limbo" width="600" />
+  <img src="https://github.com/HVR88/Docs-Extras/blob/master/limbo-info-screen.png?raw=true" alt="Limbo" width="600" />
 </p>
 
 ## Requirements
