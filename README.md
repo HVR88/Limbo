@@ -133,7 +133,7 @@ These files are automatically updated on every _docker compose up_
 
 Go to **http://<your_LIMBO_IP>:4808**
 
-_**Use the SETTINGS button on the top right of the webUI to configure your Lidarr IP address, port and API KEY. The API Key can be found in Lidarr's Settings -> General page.**_
+Use the SETTINGS button on the top right of the webUI to configure your Lidarr IP address, port and API KEY. The API Key can be found in Lidarr's **Settings -> General** page
 
 ## Notes
 
