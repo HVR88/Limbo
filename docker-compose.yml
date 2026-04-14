@@ -1,4 +1,4 @@
-#   Limbo 1.9.414.1153
+#   Limbo 1.9.414.1154
 # Description: Deploy compose file with managed assets sync
 #
 # THIS FILE IS REGULARLY OVERWRITTEN: It can't be modified nor manually maintained - leave it alone
@@ -129,7 +129,7 @@ services:
     image: *image_assets
     pull_policy: always
     environment:
-      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.414.1153
+      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.414.1154
     volumes:
       - ./:/out
     restart: "no"
@@ -370,6 +370,7 @@ services:
       LIMBO_SECRET_MASTER_KEY: "${LIMBO_SECRET_MASTER_KEY:-}"
     volumes:
       - limbo_data:/metadata/limbo_data
+      - /var/run/docker.sock:/var/run/docker.sock
       - type: bind
         source: ./admin/.limbo/runtime
         target: /run/limbo-runtime
