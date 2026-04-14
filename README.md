@@ -109,22 +109,9 @@ docker compose logs -f --no-log-prefix --tail=200 \
 >
 > Put a reverse proxy (NPM, Caddy, Traefik, SWAG) in front of your host IP and use your own (sub)domains to reach Limbo and MusicBrainz locally on port 80 (HTTP) or 443 (HTTPS) (requries a unique host name per service, like limbo.yourdomain.net and mbrainz.yourdomain.net)
 
-## Updates
-
-The `.env` file is user-maintained and won't be changed when updating. Updating will refresh all other managed files automatically: admin scripts,
-compose template, and defaults, including _example.env._
-
-Deploy source-of-truth files in this repo now live at root:
-
-- `docker-compose.yml`
-- `example.env`
-- `README.md`
-
-Deploy helper scripts for the target `admin/` folder are maintained under `deploy-admin/` in this repo and are synced to `admin/` at deploy/runtime.
-
 ### Updating
 
-Pull the latest images and restart two times:
+Pull the latest images and restart two times (the first time installs updated compose file, second time uses the updatec file to put up the containers):
 
 ```
 docker compose pull
@@ -132,13 +119,21 @@ docker compose up -d
 docker compose up -d
 ```
 
-You should also look in the _`example.env`_ file for updates that may need to be applied to `.env` - if there are new required variables, you should get a warning on the second compose up.
+The `.env` file is user-maintained and won't be changed when updating. Updating will refresh all other managed files automatically: admin scripts, compose template, and defaults, including _example.env._
+
+You should look in the _`example.env`_ file for any changes that may need to be applied to `.env` - if there are new required variables, you should get a warning on the second compose up.
+
+These files are automatically updated on every _docker compose up_
+
+- `docker-compose.yml`
+- `example.env`
+- `README.md`
 
 ## Limbo Configuration
 
 Go to **http://<your_LIMBO_IP>:4808**
 
-_**Use the SETTINGS button on the top right of the webUI to configure your Lidarr IP address, port and API KEY. The API Key can be found in Lidarr's Settings -> General page.**_
+Use the SETTINGS button on the top right of the webUI to configure your Lidarr IP address, port and API KEY. The API Key can be found in Lidarr's **Settings -> General** page
 
 ## Notes
 
