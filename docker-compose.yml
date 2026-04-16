@@ -1,4 +1,4 @@
-#   Limbo 1.9.416.1189
+#   Limbo 1.9.416.1190
 # Description: Deploy compose file with managed assets sync
 #
 # THIS FILE IS REGULARLY OVERWRITTEN: It can't be modified nor manually maintained - leave it alone
@@ -119,7 +119,7 @@ services:
     image: *image_assets
     pull_policy: always
     environment:
-      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.416.1189
+      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.416.1190
     volumes:
       - ./:/out
     restart: "no"
@@ -138,10 +138,10 @@ services:
     pull_policy: always
     command: ["/bin/sh", "/opt/limbo-preflight/migrate-limbo-data.sh"]
     environment:
-      - LIMBO_UID=${LIMBO_UID:-${PUID:-99}}
-      - LIMBO_GID=${LIMBO_GID:-${PGID:-100}}
-      - LIMBO_UMASK=${LIMBO_UMASK:-${UMASK:-002}}
-      - LIMBO_WRITE_PATHS=/metadata/limbo_data
+      LIMBO_UID: *default_limbo_uid
+      LIMBO_GID: *default_limbo_gid
+      LIMBO_UMASK: *default_limbo_umask
+      LIMBO_WRITE_PATHS: "/metadata/limbo_data"
     volumes:
       - ${LIMBO_DATA_ROOT:-./data}/limbo_data:/metadata/limbo_data
     restart: "no"
@@ -151,10 +151,10 @@ services:
     pull_policy: always
     command: ["python3.14", "/opt/limbo-preflight/init-limbo-key.py"]
     environment:
-      - LIMBO_UID=${LIMBO_UID:-${PUID:-99}}
-      - LIMBO_GID=${LIMBO_GID:-${PGID:-100}}
-      - LIMBO_UMASK=${LIMBO_UMASK:-${UMASK:-002}}
-      - LIMBO_WRITE_PATHS=/metadata/limbo_data
+      LIMBO_UID: *default_limbo_uid
+      LIMBO_GID: *default_limbo_gid
+      LIMBO_UMASK: *default_limbo_umask
+      LIMBO_WRITE_PATHS: "/metadata/limbo_data"
     volumes:
       - ${LIMBO_DATA_ROOT:-./data}/limbo_data:/metadata/limbo_data
     restart: "no"
@@ -165,10 +165,10 @@ services:
     pull_policy: always
     command: ["/bin/sh", "/opt/limbo-preflight/seed-musicbrainz-admin.sh"]
     environment:
-      - LIMBO_UID=${LIMBO_UID:-${PUID:-99}}
-      - LIMBO_GID=${LIMBO_GID:-${PGID:-100}}
-      - LIMBO_UMASK=${LIMBO_UMASK:-${UMASK:-002}}
-      - LIMBO_WRITE_PATHS=/metadata/limbo_data
+      LIMBO_UID: *default_limbo_uid
+      LIMBO_GID: *default_limbo_gid
+      LIMBO_UMASK: *default_limbo_umask
+      LIMBO_WRITE_PATHS: "/metadata/limbo_data"
     volumes:
       - ${LIMBO_DATA_ROOT:-./data}/limbo_data:/metadata/limbo_data
     restart: "no"
@@ -340,19 +340,19 @@ services:
     image: *image_indexer
     env_file: *env_files_runtime
     environment:
-      - *default_env_tz
-      - *default_env_mbdb_port
-      - *default_env_mq_port
-      - *default_env_pg_user
-      - *default_env_pg_password
-      - *default_env_pg_port
-      - *default_env_postgres_port
-      - *default_env_mb_db_port
-      - *default_env_db_port
-      - LIMBO_UID=${LIMBO_UID:-${PUID:-99}}
-      - LIMBO_GID=${LIMBO_GID:-${PGID:-100}}
-      - LIMBO_UMASK=${LIMBO_UMASK:-${UMASK:-002}}
-      - LIMBO_WRITE_PATHS=/media/dbdump
+      TZ: *default_tz
+      LIMBO_MBDB_PORT: *default_limbo_mbdb_port
+      LIMBO_MQ_PORT: *default_limbo_mq_port
+      POSTGRES_USER: *default_mb_db_user
+      POSTGRES_PASSWORD: *default_mb_db_password
+      PGPORT: *default_limbo_mbdb_port
+      POSTGRES_PORT: *default_limbo_mbdb_port
+      MB_DB_PORT: *default_limbo_mbdb_port
+      DB_PORT: *default_limbo_mbdb_port
+      LIMBO_UID: *default_limbo_uid
+      LIMBO_GID: *default_limbo_gid
+      LIMBO_UMASK: *default_limbo_umask
+      LIMBO_WRITE_PATHS: "/media/dbdump"
     volumes:
       - ${LIMBO_DATA_ROOT:-./data}/dbdump:/media/dbdump
     command: ["/usr/local/bin/indexer-runtime-user.sh", "/usr/local/bin/indexer-cron.sh"]
@@ -414,10 +414,10 @@ services:
     restart: unless-stopped
     command: ["${DLDR_COMMAND:-/app/scripts/DLDR-start.core.sh}"]
     environment:
-      - LIMBO_UID=${LIMBO_UID:-${PUID:-99}}
-      - LIMBO_GID=${LIMBO_GID:-${PGID:-100}}
-      - LIMBO_UMASK=${LIMBO_UMASK:-${UMASK:-002}}
-      - LIMBO_WRITE_PATHS=/data
+      LIMBO_UID: *default_limbo_uid
+      LIMBO_GID: *default_limbo_gid
+      LIMBO_UMASK: *default_limbo_umask
+      LIMBO_WRITE_PATHS: "/data"
     ports:
       - "${LIMBO_DLDR_API_PORT}:4812"
     volumes:
