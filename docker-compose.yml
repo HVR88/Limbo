@@ -1,4 +1,4 @@
-#   Limbo 1.9.416.1198
+#   Limbo 1.9.416.1205
 # Description: Deploy compose file with managed assets sync
 #
 # THIS FILE IS REGULARLY OVERWRITTEN: It can't be modified nor manually maintained - leave it alone
@@ -83,9 +83,9 @@ x-default-values:
   limbo_cache_db: &default_limbo_cache_db "${LIMBO_CACHE_DB:-limbo_cache_db}"
   limbo_cache_user: &default_limbo_cache_user "${LIMBO_CACHE_USER:-limbo}"
   limbo_cache_password: &default_limbo_cache_password "${LIMBO_CACHE_PASSWORD:-limbo}"
-  limbo_uid: &default_limbo_uid "${LIMBO_UID:-${PUID:-99}}"
-  limbo_gid: &default_limbo_gid "${LIMBO_GID:-${PGID:-100}}"
-  limbo_umask: &default_limbo_umask "${LIMBO_UMASK:-${UMASK:-002}}"
+  limbo_uid: &default_limbo_uid "${LIMBO_UID:-${PUID:-${LIMBO_DATA_ROOT:+99}}}"
+  limbo_gid: &default_limbo_gid "${LIMBO_GID:-${PGID:-${LIMBO_DATA_ROOT:+100}}}"
+  limbo_umask: &default_limbo_umask "${LIMBO_UMASK:-${UMASK:-${LIMBO_DATA_ROOT:+002}}}"
   limbo_network_name: &default_limbo_network_name "${LIMBO_NETWORK_NAME:-limbo}"
   limbo_network_external: &default_limbo_network_external "${LIMBO_NETWORK_EXTERNAL:-false}"
 x-default-env-items:
@@ -134,7 +134,7 @@ services:
     image: *image_assets
     pull_policy: always
     environment:
-      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.416.1198
+      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.416.1205
     volumes:
       - ./:/out
     restart: "no"
