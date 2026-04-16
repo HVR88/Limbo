@@ -1,4 +1,4 @@
-#   Limbo 1.9.416.1205
+#   Limbo 1.9.416.1206
 # Description: Deploy compose file with managed assets sync
 #
 # THIS FILE IS REGULARLY OVERWRITTEN: It can't be modified nor manually maintained - leave it alone
@@ -121,6 +121,7 @@ volumes:
   solrdump:
     driver: local
   limbo_data:
+    name: limbo_data
     driver: local
   dldr_data:
     driver: local
@@ -134,7 +135,7 @@ services:
     image: *image_assets
     pull_policy: always
     environment:
-      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.416.1205
+      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.416.1206
     volumes:
       - ./:/out
     restart: "no"
