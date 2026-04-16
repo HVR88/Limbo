@@ -1,4 +1,4 @@
-#   Limbo 1.9.416.1195
+#   Limbo 1.9.416.1197
 # Description: Deploy compose file with managed assets sync
 #
 # THIS FILE IS REGULARLY OVERWRITTEN: It can't be modified nor manually maintained - leave it alone
@@ -11,6 +11,9 @@ x-assets-depends: &assets_depends
 x-dependency-items:
   limbo_data_migrate_completed: &dep_limbo_data_migrate_completed
     limbo-data-migrate:
+      condition: service_completed_successfully
+  compose_gc_completed: &dep_compose_gc_completed
+    compose-gc:
       condition: service_completed_successfully
   preflight_completed: &dep_preflight_completed
     preflight:
@@ -134,10 +137,22 @@ services:
     image: *image_assets
     pull_policy: always
     environment:
-      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.416.1195
+      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.416.1197
     volumes:
       - ./:/out
     restart: "no"
+  compose-gc:
+    image: docker:27-cli
+    command:
+      [
+        "/bin/sh",
+        "-ceu",
+        "project=\"${COMPOSE_PROJECT_NAME:-limbo}\"; services='bootstrap|search-bootstrap|limbo-data-migrate|limbo-key-init|limbo-musicbrainz-admin-seed'; matches=\"$$(docker ps -a --format '{{.Names}}' | awk -v p=\"$$project\" -v s=\"$$services\" '$0 ~ \"^[0-9a-f]{12}_\" p \"-(\" s \")-1$$\" { print }')\"; if [ -n \"$$matches\" ]; then echo \"compose-gc hard fail: unexpected prefixed init container names detected:\"; printf '%s\n' \"$$matches\"; exit 1; fi",
+      ]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: "no"
+    depends_on: *assets_depends
   preflight:
     image: *image_limbo
     entrypoint: ["/bin/sh", "/opt/limbo-preflight/core-env.sh"]
@@ -146,7 +161,8 @@ services:
     volumes:
       - ./.env:/run/limbo.env:ro
     restart: "no"
-    depends_on: *assets_depends
+    depends_on:
+      <<: [*assets_depends, *dep_compose_gc_completed]
   limbo-data-migrate:
     image: *image_limbo
     pull_policy: always
@@ -159,7 +175,8 @@ services:
     volumes:
       - ${LIMBO_LIMBO_DATA_SOURCE:-${LIMBO_DATA_ROOT:-limbo_data}${LIMBO_DATA_ROOT:+/limbo_data}}:/metadata/limbo_data
     restart: "no"
-    depends_on: *assets_depends
+    depends_on:
+      <<: [*assets_depends, *dep_compose_gc_completed]
   limbo-key-init:
     image: *image_limbo
     pull_policy: always
@@ -173,7 +190,7 @@ services:
       - ${LIMBO_LIMBO_DATA_SOURCE:-${LIMBO_DATA_ROOT:-limbo_data}${LIMBO_DATA_ROOT:+/limbo_data}}:/metadata/limbo_data
     restart: "no"
     depends_on:
-      <<: [*assets_depends, *dep_limbo_data_migrate_completed]
+      <<: [*assets_depends, *dep_compose_gc_completed, *dep_limbo_data_migrate_completed]
   limbo-musicbrainz-admin-seed:
     image: *image_limbo
     pull_policy: always
@@ -187,7 +204,7 @@ services:
       - ${LIMBO_LIMBO_DATA_SOURCE:-${LIMBO_DATA_ROOT:-limbo_data}${LIMBO_DATA_ROOT:+/limbo_data}}:/metadata/limbo_data
     restart: "no"
     depends_on:
-      <<: [*assets_depends, *dep_limbo_key_init_completed]
+      <<: [*assets_depends, *dep_compose_gc_completed, *dep_limbo_key_init_completed]
   db:
     image: *image_db
     logging:
@@ -246,7 +263,7 @@ services:
     command: ["bootstrap.sh"]
     restart: "no"
     depends_on:
-      <<: [*assets_depends, *dep_preflight_completed, *dep_db_started]
+      <<: [*assets_depends, *dep_compose_gc_completed, *dep_preflight_completed, *dep_db_started]
   search-bootstrap:
     image: *image_search
     entrypoint: ["/usr/local/bin/bootstrap-indexes.sh"]
@@ -263,7 +280,7 @@ services:
       nofile: 65536
     restart: "no"
     depends_on:
-      <<: [*assets_depends, *dep_preflight_completed, *dep_bootstrap_completed]
+      <<: [*assets_depends, *dep_compose_gc_completed, *dep_preflight_completed, *dep_bootstrap_completed]
   search:
     image: *image_search
     mem_limit: *default_search_mem_limit

@@ -1,3 +1,4 @@
+# THIS FILE IS MANAGED: Edit defaults in .env instead, and don't edit here
 services:
   limbo-stick:
     image: espressomatic/limbo-stick:test
