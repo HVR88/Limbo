@@ -1,4 +1,4 @@
-#   Limbo 1.9.416.1192
+#   Limbo 1.9.416.1193
 # Description: Deploy compose file with managed assets sync
 #
 # THIS FILE IS REGULARLY OVERWRITTEN: It can't be modified nor manually maintained - leave it alone
@@ -86,7 +86,6 @@ x-default-values:
   limbo_uid: &default_limbo_uid "${LIMBO_UID:-${PUID:-99}}"
   limbo_gid: &default_limbo_gid "${LIMBO_GID:-${PGID:-100}}"
   limbo_umask: &default_limbo_umask "${LIMBO_UMASK:-${UMASK:-002}}"
-  limbo_data_root: &default_limbo_data_root "${LIMBO_DATA_ROOT:-./data}"
   limbo_network_name: &default_limbo_network_name "${LIMBO_NETWORK_NAME:-limbo}"
   limbo_network_external: &default_limbo_network_external "${LIMBO_NETWORK_EXTERNAL:-false}"
 x-default-env-items:
@@ -110,6 +109,22 @@ x-env-lists:
     - *default_env_postgres_port
     - *default_env_mb_db_port
     - *default_env_db_port
+volumes:
+  pgdata:
+    driver: local
+  mqdata:
+    driver: local
+  solrdata:
+    driver: local
+  dbdump:
+    driver: local
+  solrdump:
+    driver: local
+  limbo_data:
+    driver: local
+  dldr_data:
+    driver: local
+
 networks:
   default:
     name: *default_limbo_network_name
@@ -119,7 +134,7 @@ services:
     image: *image_assets
     pull_policy: always
     environment:
-      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.416.1192
+      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.416.1193
     volumes:
       - ./:/out
     restart: "no"
@@ -130,7 +145,6 @@ services:
     command: ["/bin/sh", "/opt/limbo-preflight/core-env.sh"]
     volumes:
       - ./.env:/run/limbo.env:ro
-      - ${LIMBO_DATA_ROOT:-./data}:/limbo-data-root
     restart: "no"
     depends_on: *assets_depends
   limbo-data-migrate:
@@ -143,7 +157,7 @@ services:
       LIMBO_UMASK: *default_limbo_umask
       LIMBO_WRITE_PATHS: "/metadata/limbo_data"
     volumes:
-      - ${LIMBO_DATA_ROOT:-./data}/limbo_data:/metadata/limbo_data
+      - ${LIMBO_LIMBO_DATA_SOURCE:-limbo_data}:/metadata/limbo_data
     restart: "no"
     depends_on: *assets_depends
   limbo-key-init:
@@ -156,7 +170,7 @@ services:
       LIMBO_UMASK: *default_limbo_umask
       LIMBO_WRITE_PATHS: "/metadata/limbo_data"
     volumes:
-      - ${LIMBO_DATA_ROOT:-./data}/limbo_data:/metadata/limbo_data
+      - ${LIMBO_LIMBO_DATA_SOURCE:-limbo_data}:/metadata/limbo_data
     restart: "no"
     depends_on:
       <<: [*assets_depends, *dep_limbo_data_migrate_completed]
@@ -170,7 +184,7 @@ services:
       LIMBO_UMASK: *default_limbo_umask
       LIMBO_WRITE_PATHS: "/metadata/limbo_data"
     volumes:
-      - ${LIMBO_DATA_ROOT:-./data}/limbo_data:/metadata/limbo_data
+      - ${LIMBO_LIMBO_DATA_SOURCE:-limbo_data}:/metadata/limbo_data
     restart: "no"
     depends_on:
       <<: [*assets_depends, *dep_limbo_key_init_completed]
@@ -186,7 +200,7 @@ services:
     environment: *env_list_pg_runtime
     shm_size: "${POSTGRES_SHM_SIZE:-4GB}"
     volumes:
-      - ${LIMBO_DATA_ROOT:-./data}/pgdata:/var/lib/postgresql/data
+      - ${LIMBO_PGDATA_SOURCE:-pgdata}:/var/lib/postgresql/data
     expose:
       - "${LIMBO_MBDB_PORT}"
     depends_on: *assets_depends
@@ -205,7 +219,7 @@ services:
     ulimits:
       nofile: 65536
     volumes:
-      - ${LIMBO_DATA_ROOT:-./data}/mqdata:/var/lib/rabbitmq
+      - ${LIMBO_MQDATA_SOURCE:-mqdata}:/var/lib/rabbitmq
     expose:
       - *default_limbo_mq_port
     depends_on: *assets_depends
@@ -229,7 +243,7 @@ services:
     env_file: *env_files_runtime
     environment: *env_list_pg_runtime
     volumes:
-      - ${LIMBO_DATA_ROOT:-./data}/dbdump:/media/dbdump
+      - ${LIMBO_DBDUMP_SOURCE:-dbdump}:/media/dbdump
     command: ["bootstrap.sh"]
     restart: "no"
     depends_on:
@@ -242,10 +256,10 @@ services:
     environment:
       - TZ=${TZ:-UTC}
     volumes:
-      - ${LIMBO_DATA_ROOT:-./data}/solrdata:/var/solr
-      - ${LIMBO_DATA_ROOT:-./data}/solrdump:/var/cache/musicbrainz/solr-backups
-      - ${LIMBO_DATA_ROOT:-./data}/solrdump:/var/solr/solr-backups
-      - ${LIMBO_DATA_ROOT:-./data}/dbdump:/media/dbdump:ro
+      - ${LIMBO_SOLRDATA_SOURCE:-solrdata}:/var/solr
+      - ${LIMBO_SOLRDUMP_SOURCE:-solrdump}:/var/cache/musicbrainz/solr-backups
+      - ${LIMBO_SOLRDUMP_SOURCE:-solrdump}:/var/solr/solr-backups
+      - ${LIMBO_DBDUMP_SOURCE:-dbdump}:/media/dbdump:ro
     ulimits:
       nofile: 65536
     restart: "no"
@@ -271,10 +285,10 @@ services:
     expose:
       - *default_limbo_solr_port
     volumes:
-      - ${LIMBO_DATA_ROOT:-./data}/dbdump:/media/dbdump:ro
-      - ${LIMBO_DATA_ROOT:-./data}/solrdata:/var/solr
-      - ${LIMBO_DATA_ROOT:-./data}/solrdump:/var/cache/musicbrainz/solr-backups
-      - ${LIMBO_DATA_ROOT:-./data}/solrdump:/var/solr/solr-backups
+      - ${LIMBO_DBDUMP_SOURCE:-dbdump}:/media/dbdump:ro
+      - ${LIMBO_SOLRDATA_SOURCE:-solrdata}:/var/solr
+      - ${LIMBO_SOLRDUMP_SOURCE:-solrdump}:/var/cache/musicbrainz/solr-backups
+      - ${LIMBO_SOLRDUMP_SOURCE:-solrdump}:/var/solr/solr-backups
     depends_on:
       <<: [*assets_depends, *dep_search_bootstrap_completed]
   musicbrainz:
@@ -288,10 +302,10 @@ services:
     ports:
       - "${MUSICBRAINZ_DOCKER_HOST_IPADDRCOL:-}${LIMBO_MBRAINZ_WEB_PORT}:${LIMBO_MBRAINZ_WEB_PORT}"
     volumes:
-      - ${LIMBO_DATA_ROOT:-./data}/dbdump:/media/dbdump
-      - ${LIMBO_DATA_ROOT:-./data}/solrdump:/var/cache/musicbrainz/solr-backups:ro
-      - ${LIMBO_DATA_ROOT:-./data}/limbo_data:/metadata/limbo_data:ro
-      - ${LIMBO_DATA_ROOT:-./data}/limbo_data:/opt/limbo-admin:ro
+      - ${LIMBO_DBDUMP_SOURCE:-dbdump}:/media/dbdump
+      - ${LIMBO_SOLRDUMP_SOURCE:-solrdump}:/var/cache/musicbrainz/solr-backups:ro
+      - ${LIMBO_LIMBO_DATA_SOURCE:-limbo_data}:/metadata/limbo_data:ro
+      - ${LIMBO_LIMBO_DATA_SOURCE:-limbo_data}:/opt/limbo-admin:ro
       - type: bind
         source: ./admin/.limbo/runtime
         target: /run/limbo-runtime
@@ -333,7 +347,7 @@ services:
         max-size: "10m"
         max-file: "10"
     volumes:
-      - ${LIMBO_DATA_ROOT:-./data}/dbdump:/media/dbdump
+      - ${LIMBO_DBDUMP_SOURCE:-dbdump}:/media/dbdump
     depends_on:
       <<:
         [*assets_depends, *dep_db_started, *dep_mq_started, *dep_search_started]
@@ -355,7 +369,7 @@ services:
       LIMBO_UMASK: *default_limbo_umask
       LIMBO_WRITE_PATHS: "/media/dbdump"
     volumes:
-      - ${LIMBO_DATA_ROOT:-./data}/dbdump:/media/dbdump
+      - ${LIMBO_DBDUMP_SOURCE:-dbdump}:/media/dbdump
     command: ["/usr/local/bin/indexer-runtime-user.sh", "/usr/local/bin/indexer-cron.sh"]
     restart: unless-stopped
     depends_on:
@@ -398,7 +412,7 @@ services:
       LIMBO_HOST_HELPER_PORT: *default_limbo_host_helper_port
       LIMBO_SECRET_MASTER_KEY: "${LIMBO_SECRET_MASTER_KEY:-}"
     volumes:
-      - ${LIMBO_DATA_ROOT:-./data}/limbo_data:/metadata/limbo_data
+      - ${LIMBO_LIMBO_DATA_SOURCE:-limbo_data}:/metadata/limbo_data
       - /var/run/docker.sock:/var/run/docker.sock
       - type: bind
         source: ./admin/.limbo/runtime
@@ -422,7 +436,7 @@ services:
     ports:
       - "${LIMBO_DLDR_API_PORT}:4812"
     volumes:
-      - ${LIMBO_DATA_ROOT:-./data}/dldr_data:/data
+      - ${LIMBO_DLDR_DATA_SOURCE:-dldr_data}:/data
     depends_on: *assets_depends
   limbo:
     image: *image_limbo
@@ -435,8 +449,8 @@ services:
     ports:
       - "${LIMBO_PORT}:${LIMBO_PORT}"
     volumes:
-      - ${LIMBO_DATA_ROOT:-./data}/limbo_data:/metadata/limbo_data
-      - ${LIMBO_DATA_ROOT:-./data}/dbdump:/media/dbdump:ro
+      - ${LIMBO_LIMBO_DATA_SOURCE:-limbo_data}:/metadata/limbo_data
+      - ${LIMBO_DBDUMP_SOURCE:-dbdump}:/media/dbdump:ro
       - ./admin/.limbo/assets/LIMBO_TAG_VERSION:/limbo/VERSION:ro
       - /var/run/docker.sock:/var/run/docker.sock
       - type: bind
