@@ -1,4 +1,4 @@
-#   Limbo 1.9.416.1213
+#   Limbo 1.9.417.1220
 # Description: Deploy compose file with managed assets sync
 #
 # THIS FILE IS REGULARLY OVERWRITTEN: It can't be modified nor manually maintained - leave it alone
@@ -42,7 +42,8 @@ x-dependency-items:
   limbo_key_init_completed: &dep_limbo_key_init_completed
     limbo-key-init:
       condition: service_completed_successfully
-  limbo_musicbrainz_admin_seed_completed: &dep_limbo_musicbrainz_admin_seed_completed
+  limbo_musicbrainz_admin_seed_completed:
+    &dep_limbo_musicbrainz_admin_seed_completed
     limbo-musicbrainz-admin-seed:
       condition: service_completed_successfully
 x-images:
@@ -135,7 +136,7 @@ services:
     image: *image_assets
     pull_policy: always
     environment:
-      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.416.1213
+      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.417.1220
     volumes:
       - ./:/out
     restart: "no"
@@ -192,6 +193,10 @@ services:
       <<: [*assets_depends, *dep_limbo_key_init_completed]
   db:
     image: *image_db
+    labels:
+      net.unraid.docker.managed: "composeman"
+      net.unraid.docker.icon: "http://[IP]:[PORT:4808]/assets/images/limbo-icon.png"
+      net.unraid.docker.shell: "/bin/sh"
     logging:
       driver: "json-file"
       options:
@@ -208,6 +213,10 @@ services:
     depends_on: *assets_depends
   mq:
     image: *image_mq
+    labels:
+      net.unraid.docker.managed: "composeman"
+      net.unraid.docker.icon: "http://[IP]:[PORT:4808]/assets/images/limbo-icon.png"
+      net.unraid.docker.shell: "/bin/sh"
     hostname: "mq"
     logging:
       driver: "json-file"
@@ -227,6 +236,10 @@ services:
     depends_on: *assets_depends
   redis:
     image: redis:3-alpine
+    labels:
+      net.unraid.docker.managed: "composeman"
+      net.unraid.docker.icon: "http://[IP]:[PORT:4808]/assets/images/limbo-icon.png"
+      net.unraid.docker.shell: "/bin/sh"
     logging:
       driver: "json-file"
       options:
@@ -268,6 +281,10 @@ services:
       <<: [*assets_depends, *dep_preflight_completed, *dep_bootstrap_completed]
   search:
     image: *image_search
+    labels:
+      net.unraid.docker.managed: "composeman"
+      net.unraid.docker.icon: "http://[IP]:[PORT:4808]/assets/images/limbo-icon.png"
+      net.unraid.docker.shell: "/bin/sh"
     mem_limit: *default_search_mem_limit
     logging:
       driver: "json-file"
@@ -294,6 +311,11 @@ services:
       <<: [*assets_depends, *dep_search_bootstrap_completed]
   musicbrainz:
     image: *image_musicbrainz
+    labels:
+      net.unraid.docker.managed: "composeman"
+      net.unraid.docker.icon: "http://[IP]:[PORT:4808]/assets/images/limbo-icon.png"
+      net.unraid.docker.webui: "http://[IP]:[PORT:4820]/"
+      net.unraid.docker.shell: "/bin/sh"
     pull_policy: ${MUSICBRAINZ_PULL_POLICY:-always}
     logging:
       driver: "json-file"
@@ -341,6 +363,10 @@ services:
         ]
   indexer:
     image: *image_indexer
+    labels:
+      net.unraid.docker.managed: "composeman"
+      net.unraid.docker.icon: "http://[IP]:[PORT:4808]/assets/images/limbo-icon.png"
+      net.unraid.docker.shell: "/bin/sh"
     environment: *env_list_pg_runtime
     logging:
       driver: "json-file"
@@ -354,6 +380,10 @@ services:
         [*assets_depends, *dep_db_started, *dep_mq_started, *dep_search_started]
   indexer-cron:
     image: *image_indexer
+    labels:
+      net.unraid.docker.managed: "composeman"
+      net.unraid.docker.icon: "http://[IP]:[PORT:4808]/assets/images/limbo-icon.png"
+      net.unraid.docker.shell: "/bin/sh"
     env_file: *env_files_runtime
     environment:
       TZ: *default_tz
@@ -371,7 +401,11 @@ services:
       LIMBO_WRITE_PATHS: "/media/dbdump"
     volumes:
       - ${LIMBO_DBDUMP_SOURCE:-${LIMBO_DATA_ROOT:-dbdump}${LIMBO_DATA_ROOT:+/dbdump}}:/media/dbdump
-    command: ["/usr/local/bin/indexer-runtime-user.sh", "/usr/local/bin/indexer-cron.sh"]
+    command:
+      [
+        "/usr/local/bin/indexer-runtime-user.sh",
+        "/usr/local/bin/indexer-cron.sh",
+      ]
     restart: unless-stopped
     depends_on:
       <<: [*assets_depends, *dep_db_started, *dep_search_started]
@@ -400,6 +434,10 @@ services:
       <<: [*assets_depends, *dep_db_started, *dep_bootstrap_completed]
   limbo-host-helper:
     image: *image_limbo
+    labels:
+      net.unraid.docker.managed: "composeman"
+      net.unraid.docker.icon: "http://[IP]:[PORT:4808]/assets/images/limbo-icon.png"
+      net.unraid.docker.shell: "/bin/sh"
     pull_policy: always
     # Host mode remains intentional: helper performs host-level storage/network discovery.
     network_mode: host
@@ -424,6 +462,10 @@ services:
     depends_on: *assets_depends
   limbo-dldr:
     image: *image_dldr
+    labels:
+      net.unraid.docker.managed: "composeman"
+      net.unraid.docker.icon: "http://[IP]:[PORT:4808]/assets/images/limbo-icon.png"
+      net.unraid.docker.shell: "/bin/sh"
     pull_policy: always
     container_name: limbo-dldr
     hostname: limbo-dldr
@@ -441,6 +483,11 @@ services:
     depends_on: *assets_depends
   limbo:
     image: *image_limbo
+    labels:
+      net.unraid.docker.managed: "composeman"
+      net.unraid.docker.icon: "http://[IP]:[PORT:4808]/assets/images/limbo-icon.png"
+      net.unraid.docker.webui: "http://[IP]:[PORT:4808]/"
+      net.unraid.docker.shell: "/bin/bash"
     pull_policy: always
     cap_add:
       - SYS_ADMIN
