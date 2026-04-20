@@ -1,4 +1,4 @@
-#   Limbo 1.9.420.1282
+#   Limbo 1.9.420.1283
 # Description: Deploy compose file with managed assets sync
 #
 # THIS FILE IS REGULARLY OVERWRITTEN: It can't be modified nor manually maintained - leave it alone
@@ -123,6 +123,9 @@ volumes:
   limbo_data:
     name: limbo_data
     driver: local
+  limbo_admin:
+    name: limbo_admin
+    driver: local
   dldr_data:
     driver: local
 
@@ -135,7 +138,7 @@ services:
     image: *image_assets
     pull_policy: always
     environment:
-      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.420.1282
+      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.420.1283
     volumes:
       - ./:/out
     restart: "no"
@@ -152,7 +155,8 @@ services:
   ownership-normalize:
     image: *image_limbo
     pull_policy: always
-    command: ["/bin/sh", "/opt/limbo-preflight/normalize-data-ownership.sh"]
+    entrypoint: ["/bin/sh", "/opt/limbo-preflight/normalize-data-ownership.sh"]
+    command: []
     environment:
       LIMBO_DATA_ROOT: "${LIMBO_DATA_ROOT:-}"
       LIMBO_UID: "${LIMBO_UID:-}"
@@ -179,7 +183,8 @@ services:
   ownership-normalize-post-bootstrap:
     image: *image_limbo
     pull_policy: always
-    command: ["/bin/sh", "/opt/limbo-preflight/normalize-data-ownership.sh"]
+    entrypoint: ["/bin/sh", "/opt/limbo-preflight/normalize-data-ownership.sh"]
+    command: []
     environment:
       LIMBO_DATA_ROOT: "${LIMBO_DATA_ROOT:-}"
       LIMBO_UID: "${LIMBO_UID:-}"
@@ -240,14 +245,12 @@ services:
   limbo-musicbrainz-admin-seed:
     image: *image_limbo
     pull_policy: always
-    command: ["/bin/sh", "/opt/limbo-preflight/seed-musicbrainz-admin.sh"]
+    entrypoint: ["/bin/sh", "/opt/limbo-preflight/seed-musicbrainz-admin.sh"]
+    command: []
     environment:
-      LIMBO_UID: *default_limbo_uid
-      LIMBO_GID: *default_limbo_gid
-      LIMBO_UMASK: *default_limbo_umask
-      LIMBO_WRITE_PATHS: "/metadata/limbo_data"
+      LIMBO_ADMIN_RUNTIME_DIR: "/opt/limbo-admin"
     volumes:
-      - ${LIMBO_LIMBO_DATA_SOURCE:-${LIMBO_DATA_ROOT:-limbo_data}${LIMBO_DATA_ROOT:+/limbo_data}}:/metadata/limbo_data
+      - limbo_admin:/opt/limbo-admin
     restart: "no"
     depends_on:
       <<: [*assets_depends, *dep_limbo_key_init_completed]
@@ -318,7 +321,19 @@ services:
   bootstrap:
     image: *image_bootstrap
     env_file: *env_files_runtime
-    environment: *env_list_pg_runtime
+    environment:
+      - *default_env_tz
+      - *default_env_mbdb_port
+      - *default_env_mq_port
+      - *default_env_pg_user
+      - *default_env_pg_password
+      # Upstream bootstrap compatibility bridge:
+      # keep canonical source LIMBO_MBDB_PORT while exporting legacy port envs
+      # only for this service.
+      - PGPORT=${LIMBO_MBDB_PORT:-4818}
+      - POSTGRES_PORT=${LIMBO_MBDB_PORT:-4818}
+      - MB_DB_PORT=${LIMBO_MBDB_PORT:-4818}
+      - DB_PORT=${LIMBO_MBDB_PORT:-4818}
     volumes:
       - ${LIMBO_DBDUMP_SOURCE:-${LIMBO_DATA_ROOT:-dbdump}${LIMBO_DATA_ROOT:+/dbdump}}:/media/dbdump
     command: ["bootstrap.sh"]
@@ -399,7 +414,7 @@ services:
       - ${LIMBO_DBDUMP_SOURCE:-${LIMBO_DATA_ROOT:-dbdump}${LIMBO_DATA_ROOT:+/dbdump}}:/media/dbdump
       - ${LIMBO_SOLRDUMP_SOURCE:-${LIMBO_DATA_ROOT:-solrdump}${LIMBO_DATA_ROOT:+/solrdump}}:/var/cache/musicbrainz/solr-backups:ro
       - ${LIMBO_LIMBO_DATA_SOURCE:-${LIMBO_DATA_ROOT:-limbo_data}${LIMBO_DATA_ROOT:+/limbo_data}}:/metadata/limbo_data:ro
-      - ${LIMBO_LIMBO_DATA_SOURCE:-${LIMBO_DATA_ROOT:-limbo_data}${LIMBO_DATA_ROOT:+/limbo_data}}:/opt/limbo-admin:ro
+      - limbo_admin:/opt/limbo-admin:ro
       - type: bind
         source: ./admin/.limbo/runtime
         target: /run/limbo-runtime
@@ -594,6 +609,7 @@ services:
       LIMBO_MBDB_PORT: *default_limbo_mbdb_port
       LIMBO_ADMIN_BASE_URL: "http://musicbrainz:${LIMBO_ADMIN_PORT}"
       LIMBO_VERSION_FILE: "/limbo/VERSION"
+      LIMBO_STARTUP_LOCK_DIR: "/tmp/limbo-startup-locks"
       # --- MusicBrainz DB creds (set these to match your mirror) ---
       PROVIDERS__MUSICBRAINZDBPROVIDER__1__DB_HOST: *default_mb_db_host
       PROVIDERS__MUSICBRAINZDBPROVIDER__1__DB_PORT: *default_mb_db_port
