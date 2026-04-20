@@ -1,4 +1,4 @@
-#   Limbo 1.9.420.1280
+#   Limbo 1.9.420.1282
 # Description: Deploy compose file with managed assets sync
 #
 # THIS FILE IS REGULARLY OVERWRITTEN: It can't be modified nor manually maintained - leave it alone
@@ -9,6 +9,13 @@ x-assets-depends: &assets_depends
   assets:
     condition: service_completed_successfully
 x-dependency-items:
+  ownership_normalize_completed: &dep_ownership_normalize_completed
+    ownership-normalize:
+      condition: service_completed_successfully
+  ownership_post_bootstrap_normalize_completed:
+    &dep_ownership_post_bootstrap_normalize_completed
+    ownership-normalize-post-bootstrap:
+      condition: service_completed_successfully
   limbo_data_migrate_completed: &dep_limbo_data_migrate_completed
     limbo-data-migrate:
       condition: service_completed_successfully
@@ -128,7 +135,7 @@ services:
     image: *image_assets
     pull_policy: always
     environment:
-      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.420.1280
+      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.420.1282
     volumes:
       - ./:/out
     restart: "no"
@@ -142,6 +149,66 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     restart: "no"
     depends_on: *assets_depends
+  ownership-normalize:
+    image: *image_limbo
+    pull_policy: always
+    command: ["/bin/sh", "/opt/limbo-preflight/normalize-data-ownership.sh"]
+    environment:
+      LIMBO_DATA_ROOT: "${LIMBO_DATA_ROOT:-}"
+      LIMBO_UID: "${LIMBO_UID:-}"
+      LIMBO_GID: "${LIMBO_GID:-}"
+      LIMBO_POLICY_UID: "${LIMBO_UID:-${PUID:-99}}"
+      LIMBO_POLICY_GID: "${LIMBO_GID:-${PGID:-100}}"
+      LIMBO_PGDATA_UID: "${LIMBO_PGDATA_UID:-999}"
+      LIMBO_PGDATA_GID: "${LIMBO_PGDATA_GID:-999}"
+      LIMBO_MQDATA_UID: "${LIMBO_MQDATA_UID:-999}"
+      LIMBO_MQDATA_GID: "${LIMBO_MQDATA_GID:-999}"
+      LIMBO_SOLRDATA_UID: "${LIMBO_SOLRDATA_UID:-8983}"
+      LIMBO_SOLRDATA_GID: "${LIMBO_SOLRDATA_GID:-8983}"
+    volumes:
+      - ${LIMBO_PGDATA_SOURCE:-${LIMBO_DATA_ROOT:-pgdata}${LIMBO_DATA_ROOT:+/pgdata}}:/ownership/pgdata
+      - ${LIMBO_MQDATA_SOURCE:-${LIMBO_DATA_ROOT:-mqdata}${LIMBO_DATA_ROOT:+/mqdata}}:/ownership/mqdata
+      - ${LIMBO_SOLRDATA_SOURCE:-${LIMBO_DATA_ROOT:-solrdata}${LIMBO_DATA_ROOT:+/solrdata}}:/ownership/solrdata
+      - ${LIMBO_SOLRDUMP_SOURCE:-${LIMBO_DATA_ROOT:-solrdump}${LIMBO_DATA_ROOT:+/solrdump}}:/ownership/solrdump
+      - ${LIMBO_DBDUMP_SOURCE:-${LIMBO_DATA_ROOT:-dbdump}${LIMBO_DATA_ROOT:+/dbdump}}:/ownership/dbdump
+      - ${LIMBO_LIMBO_DATA_SOURCE:-${LIMBO_DATA_ROOT:-limbo_data}${LIMBO_DATA_ROOT:+/limbo_data}}:/ownership/limbo_data
+      - ${LIMBO_DLDR_DATA_SOURCE:-${LIMBO_DATA_ROOT:-dldr_data}${LIMBO_DATA_ROOT:+/dldr_data}}:/ownership/dldr_data
+    restart: "no"
+    depends_on:
+      <<: [*assets_depends, *dep_preflight_completed]
+  ownership-normalize-post-bootstrap:
+    image: *image_limbo
+    pull_policy: always
+    command: ["/bin/sh", "/opt/limbo-preflight/normalize-data-ownership.sh"]
+    environment:
+      LIMBO_DATA_ROOT: "${LIMBO_DATA_ROOT:-}"
+      LIMBO_UID: "${LIMBO_UID:-}"
+      LIMBO_GID: "${LIMBO_GID:-}"
+      LIMBO_POLICY_UID: "${LIMBO_UID:-${PUID:-99}}"
+      LIMBO_POLICY_GID: "${LIMBO_GID:-${PGID:-100}}"
+      LIMBO_PGDATA_UID: "${LIMBO_PGDATA_UID:-999}"
+      LIMBO_PGDATA_GID: "${LIMBO_PGDATA_GID:-999}"
+      LIMBO_MQDATA_UID: "${LIMBO_MQDATA_UID:-999}"
+      LIMBO_MQDATA_GID: "${LIMBO_MQDATA_GID:-999}"
+      LIMBO_SOLRDATA_UID: "${LIMBO_SOLRDATA_UID:-8983}"
+      LIMBO_SOLRDATA_GID: "${LIMBO_SOLRDATA_GID:-8983}"
+    volumes:
+      - ${LIMBO_PGDATA_SOURCE:-${LIMBO_DATA_ROOT:-pgdata}${LIMBO_DATA_ROOT:+/pgdata}}:/ownership/pgdata
+      - ${LIMBO_MQDATA_SOURCE:-${LIMBO_DATA_ROOT:-mqdata}${LIMBO_DATA_ROOT:+/mqdata}}:/ownership/mqdata
+      - ${LIMBO_SOLRDATA_SOURCE:-${LIMBO_DATA_ROOT:-solrdata}${LIMBO_DATA_ROOT:+/solrdata}}:/ownership/solrdata
+      - ${LIMBO_SOLRDUMP_SOURCE:-${LIMBO_DATA_ROOT:-solrdump}${LIMBO_DATA_ROOT:+/solrdump}}:/ownership/solrdump
+      - ${LIMBO_DBDUMP_SOURCE:-${LIMBO_DATA_ROOT:-dbdump}${LIMBO_DATA_ROOT:+/dbdump}}:/ownership/dbdump
+      - ${LIMBO_LIMBO_DATA_SOURCE:-${LIMBO_DATA_ROOT:-limbo_data}${LIMBO_DATA_ROOT:+/limbo_data}}:/ownership/limbo_data
+      - ${LIMBO_DLDR_DATA_SOURCE:-${LIMBO_DATA_ROOT:-dldr_data}${LIMBO_DATA_ROOT:+/dldr_data}}:/ownership/dldr_data
+    restart: "no"
+    depends_on:
+      <<:
+        [
+          *assets_depends,
+          *dep_ownership_normalize_completed,
+          *dep_bootstrap_completed,
+          *dep_search_bootstrap_completed,
+        ]
   limbo-data-migrate:
     image: *image_limbo
     pull_policy: always
@@ -154,7 +221,8 @@ services:
     volumes:
       - ${LIMBO_LIMBO_DATA_SOURCE:-${LIMBO_DATA_ROOT:-limbo_data}${LIMBO_DATA_ROOT:+/limbo_data}}:/metadata/limbo_data
     restart: "no"
-    depends_on: *assets_depends
+    depends_on:
+      <<: [*assets_depends, *dep_ownership_normalize_completed]
   limbo-key-init:
     image: *image_limbo
     pull_policy: always
@@ -202,7 +270,8 @@ services:
       - ${LIMBO_PGDATA_SOURCE:-${LIMBO_DATA_ROOT:-pgdata}${LIMBO_DATA_ROOT:+/pgdata}}:/var/lib/postgresql/data
     expose:
       - "${LIMBO_MBDB_PORT:-4818}"
-    depends_on: *assets_depends
+    depends_on:
+      <<: [*assets_depends, *dep_ownership_normalize_completed]
   mq:
     image: *image_mq
     labels:
@@ -225,7 +294,8 @@ services:
       - ${LIMBO_MQDATA_SOURCE:-${LIMBO_DATA_ROOT:-mqdata}${LIMBO_DATA_ROOT:+/mqdata}}:/var/lib/rabbitmq
     expose:
       - *default_limbo_mq_port
-    depends_on: *assets_depends
+    depends_on:
+      <<: [*assets_depends, *dep_ownership_normalize_completed]
   redis:
     image: redis:3-alpine
     labels:
@@ -243,7 +313,8 @@ services:
     restart: unless-stopped
     expose:
       - "${LIMBO_REDIS_PORT}"
-    depends_on: *assets_depends
+    depends_on:
+      <<: [*assets_depends, *dep_ownership_normalize_completed]
   bootstrap:
     image: *image_bootstrap
     env_file: *env_files_runtime
@@ -253,7 +324,7 @@ services:
     command: ["bootstrap.sh"]
     restart: "no"
     depends_on:
-      <<: [*assets_depends, *dep_preflight_completed, *dep_db_started]
+      <<: [*assets_depends, *dep_preflight_completed, *dep_ownership_normalize_completed, *dep_db_started]
   search-bootstrap:
     image: *image_search
     entrypoint: ["/usr/local/bin/bootstrap-indexes.sh"]
@@ -273,7 +344,7 @@ services:
       nofile: 65536
     restart: "no"
     depends_on:
-      <<: [*assets_depends, *dep_preflight_completed, *dep_bootstrap_completed]
+      <<: [*assets_depends, *dep_preflight_completed, *dep_ownership_normalize_completed, *dep_bootstrap_completed]
   search:
     image: *image_search
     labels:
@@ -302,7 +373,13 @@ services:
       - ${LIMBO_SOLRDUMP_SOURCE:-${LIMBO_DATA_ROOT:-solrdump}${LIMBO_DATA_ROOT:+/solrdump}}:/var/cache/musicbrainz/solr-backups
       - ${LIMBO_SOLRDUMP_SOURCE:-${LIMBO_DATA_ROOT:-solrdump}${LIMBO_DATA_ROOT:+/solrdump}}:/var/solr/solr-backups
     depends_on:
-      <<: [*assets_depends, *dep_search_bootstrap_completed]
+      <<:
+        [
+          *assets_depends,
+          *dep_ownership_normalize_completed,
+          *dep_search_bootstrap_completed,
+          *dep_ownership_post_bootstrap_normalize_completed,
+        ]
   musicbrainz:
     image: *image_musicbrainz
     labels:
@@ -346,6 +423,8 @@ services:
         [
           *assets_depends,
           *dep_preflight_completed,
+          *dep_ownership_normalize_completed,
+          *dep_ownership_post_bootstrap_normalize_completed,
           *dep_limbo_key_init_completed,
           *dep_limbo_musicbrainz_admin_seed_completed,
           *dep_db_started,
@@ -371,7 +450,7 @@ services:
       - ${LIMBO_DBDUMP_SOURCE:-${LIMBO_DATA_ROOT:-dbdump}${LIMBO_DATA_ROOT:+/dbdump}}:/media/dbdump
     depends_on:
       <<:
-        [*assets_depends, *dep_db_started, *dep_mq_started, *dep_search_started]
+        [*assets_depends, *dep_ownership_normalize_completed, *dep_ownership_post_bootstrap_normalize_completed, *dep_db_started, *dep_mq_started, *dep_search_started]
   indexer-cron:
     image: *image_indexer
     labels:
@@ -398,7 +477,7 @@ services:
       ]
     restart: unless-stopped
     depends_on:
-      <<: [*assets_depends, *dep_db_started, *dep_search_started]
+      <<: [*assets_depends, *dep_ownership_normalize_completed, *dep_ownership_post_bootstrap_normalize_completed, *dep_db_started, *dep_search_started]
   limbo-init:
     image: *image_limbo
     pull_policy: always
@@ -421,7 +500,7 @@ services:
       LIMBO_CACHE_PASSWORD: *default_limbo_cache_password
     restart: "no"
     depends_on:
-      <<: [*assets_depends, *dep_db_started, *dep_bootstrap_completed]
+      <<: [*assets_depends, *dep_ownership_normalize_completed, *dep_db_started, *dep_bootstrap_completed]
   limbo-host-helper:
     image: *image_limbo
     labels:
@@ -447,7 +526,8 @@ services:
         bind:
           create_host_path: true
     restart: unless-stopped
-    depends_on: *assets_depends
+    depends_on:
+      <<: [*assets_depends, *dep_ownership_normalize_completed]
   limbo-dldr:
     image: *image_dldr
     labels:
@@ -468,7 +548,8 @@ services:
       - "${LIMBO_DLDR_API_PORT}:4812"
     volumes:
       - ${LIMBO_DLDR_DATA_SOURCE:-${LIMBO_DATA_ROOT:-dldr_data}${LIMBO_DATA_ROOT:+/dldr_data}}:/data
-    depends_on: *assets_depends
+    depends_on:
+      <<: [*assets_depends, *dep_ownership_normalize_completed]
   limbo:
     image: *image_limbo
     labels:
@@ -523,6 +604,8 @@ services:
       <<:
         [
           *assets_depends,
+          *dep_ownership_normalize_completed,
+          *dep_ownership_post_bootstrap_normalize_completed,
           *dep_limbo_host_helper_started,
           *dep_limbo_init_completed,
           *dep_limbo_key_init_completed,
