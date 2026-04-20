@@ -1,4 +1,4 @@
-#   Limbo 1.9.420.1286
+#   Limbo 1.9.420.1287
 # Description: Deploy compose file with managed assets sync
 #
 # THIS FILE IS REGULARLY OVERWRITTEN: It can't be modified nor manually maintained - leave it alone
@@ -51,6 +51,7 @@ x-images:
   assets: &image_assets ${LIMBO_DOCKERHUB_NAMESPACE:-espressomatic}/${LIMBO_DOCKERHUB_REPO_PREFIX:-limbo}-assets:${LIMBO_CHANNEL:-latest}
   db: &image_db ${LIMBO_DOCKERHUB_NAMESPACE:-espressomatic}/${LIMBO_DOCKERHUB_REPO_PREFIX:-limbo}-db:${LIMBO_CHANNEL:-latest}
   mq: &image_mq ${LIMBO_DOCKERHUB_NAMESPACE:-espressomatic}/${LIMBO_DOCKERHUB_REPO_PREFIX:-limbo}-mq:${LIMBO_CHANNEL:-latest}
+  redis: &image_redis ${LIMBO_DOCKERHUB_NAMESPACE:-espressomatic}/${LIMBO_DOCKERHUB_REPO_PREFIX:-limbo}-redis:${LIMBO_CHANNEL:-latest}
   bootstrap: &image_bootstrap ${LIMBO_DOCKERHUB_NAMESPACE:-espressomatic}/${LIMBO_DOCKERHUB_REPO_PREFIX:-limbo}-bootstrap:${LIMBO_CHANNEL:-latest}
   musicbrainz: &image_musicbrainz ${MUSICBRAINZ_IMAGE:-${LIMBO_DOCKERHUB_NAMESPACE:-espressomatic}/${LIMBO_DOCKERHUB_REPO_PREFIX:-limbo}-musicbrainz:${LIMBO_CHANNEL:-latest}}
   search: &image_search ${LIMBO_DOCKERHUB_NAMESPACE:-espressomatic}/${LIMBO_DOCKERHUB_REPO_PREFIX:-limbo}-search:${LIMBO_CHANNEL:-latest}
@@ -102,6 +103,9 @@ x-env-lists:
     - *default_env_mq_port
     - *default_env_pg_user
     - *default_env_pg_password
+x-labels:
+  managed_version: &managed_version_labels
+    com.limbo.publish.version: "${LIMBO_DEPLOY_VERSION:-1.9.420.1287}"
 volumes:
   pgdata:
     driver: local
@@ -129,14 +133,16 @@ networks:
 services:
   assets:
     image: *image_assets
+    labels: *managed_version_labels
     pull_policy: always
     environment:
-      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.420.1286
+      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.420.1287
     volumes:
       - ./:/out
     restart: "no"
   preflight:
     image: *image_limbo
+    labels: *managed_version_labels
     entrypoint: ["/bin/sh", "/opt/limbo-preflight/core-env.sh"]
     env_file: *env_files_runtime
     command: ["/bin/sh", "/opt/limbo-preflight/core-env.sh"]
@@ -166,6 +172,7 @@ services:
     depends_on: *assets_depends
   limbo-data-migrate:
     image: *image_limbo
+    labels: *managed_version_labels
     pull_policy: always
     command: ["/bin/sh", "/opt/limbo-preflight/migrate-limbo-data.sh"]
     environment:
@@ -180,6 +187,7 @@ services:
       <<: [*assets_depends, *dep_preflight_completed]
   limbo-key-init:
     image: *image_limbo
+    labels: *managed_version_labels
     pull_policy: always
     command: ["python3.14", "/opt/limbo-preflight/init-limbo-key.py"]
     environment:
@@ -194,6 +202,7 @@ services:
       <<: [*assets_depends, *dep_limbo_data_migrate_completed]
   limbo-musicbrainz-admin-seed:
     image: *image_limbo
+    labels: *managed_version_labels
     pull_policy: always
     entrypoint: ["/bin/sh", "/opt/limbo-preflight/seed-musicbrainz-admin.sh"]
     command: []
@@ -207,6 +216,7 @@ services:
   db:
     image: *image_db
     labels:
+      <<: *managed_version_labels
       net.unraid.docker.managed: "composeman"
       net.unraid.docker.icon: "http://[IP]:[PORT:4808]/assets/images/limbo-icon.png"
       net.unraid.docker.shell: "/bin/sh"
@@ -228,6 +238,7 @@ services:
   mq:
     image: *image_mq
     labels:
+      <<: *managed_version_labels
       net.unraid.docker.managed: "composeman"
       net.unraid.docker.icon: "http://[IP]:[PORT:4808]/assets/images/limbo-icon.png"
       net.unraid.docker.shell: "/bin/sh"
@@ -250,8 +261,9 @@ services:
     depends_on:
       <<: [*assets_depends, *dep_preflight_completed]
   redis:
-    image: redis:3-alpine
+    image: *image_redis
     labels:
+      <<: *managed_version_labels
       net.unraid.docker.managed: "composeman"
       net.unraid.docker.icon: "http://[IP]:[PORT:4808]/assets/images/limbo-icon.png"
       net.unraid.docker.shell: "/bin/sh"
@@ -270,6 +282,7 @@ services:
       <<: [*assets_depends, *dep_preflight_completed]
   bootstrap:
     image: *image_bootstrap
+    labels: *managed_version_labels
     env_file: *env_files_runtime
     environment:
       - *default_env_tz
@@ -285,6 +298,7 @@ services:
       <<: [*assets_depends, *dep_preflight_completed, *dep_db_started]
   search-bootstrap:
     image: *image_search
+    labels: *managed_version_labels
     entrypoint: ["/usr/local/bin/bootstrap-indexes.sh"]
     # Run bootstrap as root so permission self-repair in bootstrap-indexes.sh can
     # fix bind-mounted solrdata/solrdump ownership on Unraid appdata paths.
@@ -306,6 +320,7 @@ services:
   search:
     image: *image_search
     labels:
+      <<: *managed_version_labels
       net.unraid.docker.managed: "composeman"
       net.unraid.docker.icon: "http://[IP]:[PORT:4808]/assets/images/limbo-icon.png"
       net.unraid.docker.shell: "/bin/sh"
@@ -335,6 +350,7 @@ services:
   musicbrainz:
     image: *image_musicbrainz
     labels:
+      <<: *managed_version_labels
       net.unraid.docker.managed: "composeman"
       net.unraid.docker.icon: "http://[IP]:[PORT:4808]/assets/images/limbo-icon.png"
       net.unraid.docker.webui: "http://[IP]:[PORT:4820]/"
@@ -387,6 +403,7 @@ services:
   indexer:
     image: *image_indexer
     labels:
+      <<: *managed_version_labels
       net.unraid.docker.managed: "composeman"
       net.unraid.docker.icon: "http://[IP]:[PORT:4808]/assets/images/limbo-icon.png"
       net.unraid.docker.shell: "/bin/sh"
@@ -404,6 +421,7 @@ services:
   indexer-cron:
     image: *image_indexer
     labels:
+      <<: *managed_version_labels
       net.unraid.docker.managed: "composeman"
       net.unraid.docker.icon: "http://[IP]:[PORT:4808]/assets/images/limbo-icon.png"
       net.unraid.docker.shell: "/bin/sh"
@@ -430,6 +448,7 @@ services:
       <<: [*assets_depends, *dep_db_started, *dep_search_started]
   limbo-init:
     image: *image_limbo
+    labels: *managed_version_labels
     pull_policy: always
     command: ["/bin/bash", "/metadata/init/init-mbdb.sh"]
     environment:
@@ -454,6 +473,7 @@ services:
   limbo-host-helper:
     image: *image_limbo
     labels:
+      <<: *managed_version_labels
       net.unraid.docker.managed: "composeman"
       net.unraid.docker.icon: "http://[IP]:[PORT:4808]/assets/images/limbo-icon.png"
       net.unraid.docker.shell: "/bin/sh"
@@ -480,6 +500,7 @@ services:
   limbo-dldr:
     image: *image_dldr
     labels:
+      <<: *managed_version_labels
       net.unraid.docker.managed: "composeman"
       net.unraid.docker.icon: "http://[IP]:[PORT:4808]/assets/images/limbo-icon.png"
       net.unraid.docker.shell: "/bin/sh"
@@ -501,6 +522,7 @@ services:
   limbo:
     image: *image_limbo
     labels:
+      <<: *managed_version_labels
       net.unraid.docker.managed: "composeman"
       net.unraid.docker.icon: "http://[IP]:[PORT:4808]/assets/images/limbo-icon.png"
       net.unraid.docker.webui: "http://[IP]:[PORT:4808]/"
