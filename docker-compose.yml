@@ -1,4 +1,4 @@
-#   Limbo 1.9.420.1309
+#   Limbo 1.9.420.1310
 # Description: Deploy compose file with managed assets sync
 #
 # THIS FILE IS REGULARLY OVERWRITTEN: It can't be modified nor manually maintained - leave it alone
@@ -9,12 +9,6 @@ x-assets-depends: &assets_depends
   assets:
     condition: service_completed_successfully
 x-dependency-items:
-  limbo_data_migrate_completed: &dep_limbo_data_migrate_completed
-    limbo-data-migrate:
-      condition: service_completed_successfully
-  preflight_completed: &dep_preflight_completed
-    preflight:
-      condition: service_completed_successfully
   db_started: &dep_db_started
     db:
       condition: service_started
@@ -30,21 +24,11 @@ x-dependency-items:
   bootstrap_completed: &dep_bootstrap_completed
     bootstrap:
       condition: service_completed_successfully
-  search_bootstrap_completed: &dep_search_bootstrap_completed
-    search-bootstrap:
-      condition: service_completed_successfully
   limbo_host_helper_started: &dep_limbo_host_helper_started
     limbo-host-helper:
       condition: service_started
-  limbo_init_completed: &dep_limbo_init_completed
-    limbo-init:
-      condition: service_completed_successfully
-  limbo_key_init_completed: &dep_limbo_key_init_completed
-    limbo-key-init:
-      condition: service_completed_successfully
-  limbo_musicbrainz_admin_seed_completed:
-    &dep_limbo_musicbrainz_admin_seed_completed
-    limbo-musicbrainz-admin-seed:
+  limbo_system_init_completed: &dep_limbo_system_init_completed
+    limbo-system-init:
       condition: service_completed_successfully
 x-images:
   limbo: &image_limbo ${LIMBO_IMAGE:-espressomatic/limbo:${LIMBO_CHANNEL:-latest}}
@@ -105,7 +89,7 @@ x-env-lists:
     - *default_env_pg_password
 x-labels:
   managed_version: &managed_version_labels
-    com.limbo.publish.version: "1.9.420.1309"
+    com.limbo.publish.version: "1.9.420.1310"
 volumes:
   pgdata:
     driver: local
@@ -136,20 +120,28 @@ services:
     labels: *managed_version_labels
     pull_policy: always
     environment:
-      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.420.1309
+      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.420.1310
     volumes:
       - ./:/out
     restart: "no"
-  preflight:
+  limbo-system-init:
     image: *image_limbo
     labels: *managed_version_labels
-    entrypoint: ["/bin/sh", "/opt/limbo-preflight/core-env.sh"]
+    pull_policy: always
     env_file: *env_files_runtime
-    command: ["/bin/sh", "/opt/limbo-preflight/core-env.sh"]
+    command:
+      [
+        "/bin/sh",
+        "-lc",
+        "/bin/sh /opt/limbo-preflight/core-env.sh && python3.14 /opt/limbo-preflight/init-limbo-key.py && /bin/sh /opt/limbo-preflight/seed-musicbrainz-admin.sh && /bin/bash /metadata/init/init-mbdb.sh",
+      ]
     environment:
+      TZ: *default_tz
       LIMBO_DATA_ROOT: "${LIMBO_DATA_ROOT:-}"
-      LIMBO_UID: "${LIMBO_UID:-}"
-      LIMBO_GID: "${LIMBO_GID:-}"
+      LIMBO_UID: *default_limbo_uid
+      LIMBO_GID: *default_limbo_gid
+      LIMBO_UMASK: *default_limbo_umask
+      LIMBO_WRITE_PATHS: "/metadata/limbo_data"
       LIMBO_POLICY_UID: "${LIMBO_UID:-${PUID:-99}}"
       LIMBO_POLICY_GID: "${LIMBO_GID:-${PGID:-100}}"
       LIMBO_PGDATA_UID: "${LIMBO_PGDATA_UID:-999}"
@@ -158,6 +150,17 @@ services:
       LIMBO_MQDATA_GID: "${LIMBO_MQDATA_GID:-999}"
       LIMBO_SOLRDATA_UID: "${LIMBO_SOLRDATA_UID:-8983}"
       LIMBO_SOLRDATA_GID: "${LIMBO_SOLRDATA_GID:-8983}"
+      LIMBO_ADMIN_RUNTIME_DIR: "/opt/limbo-admin"
+      MB_DB_HOST: *default_mb_db_host
+      LIMBO_MBDB_PORT: *default_limbo_mbdb_port
+      MB_DB_USER: *default_mb_db_user
+      MB_DB_PASSWORD: *default_mb_db_password
+      LIMBO_MBDB_USER: *default_mb_db_user
+      LIMBO_MBDB_PASSWORD: *default_mb_db_password
+      MB_DB_NAME: *default_mb_db_name
+      LIMBO_CACHE_DB: *default_limbo_cache_db
+      LIMBO_CACHE_USER: *default_limbo_cache_user
+      LIMBO_CACHE_PASSWORD: *default_limbo_cache_password
     volumes:
       - ./.env:/run/limbo.env:ro
       - /var/run/docker.sock:/var/run/docker.sock
@@ -168,92 +171,12 @@ services:
       - ${LIMBO_DBDUMP_SOURCE:-${LIMBO_DATA_ROOT:-dbdump}${LIMBO_DATA_ROOT:+/dbdump}}:/ownership/dbdump
       - ${LIMBO_LIMBO_DATA_SOURCE:-${LIMBO_DATA_ROOT:-limbo_data}${LIMBO_DATA_ROOT:+/limbo_data}}:/ownership/limbo_data
       - ${LIMBO_DLDR_DATA_SOURCE:-${LIMBO_DATA_ROOT:-dldr_data}${LIMBO_DATA_ROOT:+/dldr_data}}:/ownership/dldr_data
-    restart: "no"
-    depends_on: *assets_depends
-  version-report:
-    image: *image_limbo
-    labels: *managed_version_labels
-    pull_policy: always
-    command: ["python3.14", "/opt/limbo-preflight/report-image-versions.py"]
-    environment:
-      COMPOSE_PROJECT_NAME: "${COMPOSE_PROJECT_NAME:-limbo}"
-      LIMBO_CHANNEL: "${LIMBO_CHANNEL:-latest}"
-      LIMBO_DEPLOY_VERSION: "1.9.420.1309"
-      LIMBO_IMAGE_REF: *image_limbo
-      LIMBO_ASSETS_IMAGE_REF: *image_assets
-      LIMBO_DB_IMAGE_REF: *image_db
-      LIMBO_MQ_IMAGE_REF: *image_mq
-      LIMBO_REDIS_IMAGE_REF: *image_redis
-      LIMBO_BOOTSTRAP_IMAGE_REF: *image_bootstrap
-      LIMBO_MUSICBRAINZ_IMAGE_REF: *image_musicbrainz
-      LIMBO_SEARCH_IMAGE_REF: *image_search
-      LIMBO_INDEXER_IMAGE_REF: *image_indexer
-      LIMBO_DLDR_IMAGE_REF: *image_dldr
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    restart: "no"
-    depends_on:
-      <<: [*assets_depends, *dep_preflight_completed]
-  version-marker:
-    image: *image_limbo
-    labels: *managed_version_labels
-    pull_policy: always
-    container_name: "Version-1.9.420.1309"
-    command:
-      [
-        "/bin/sh",
-        "-lc",
-        "echo \"[version-marker] Limbo version 1.9.420.1309 channel=${LIMBO_CHANNEL:-latest}\"",
-      ]
-    environment:
-      LIMBO_CHANNEL: "${LIMBO_CHANNEL:-latest}"
-      LIMBO_DEPLOY_VERSION: "1.9.420.1309"
-    restart: "no"
-    depends_on:
-      <<: [*assets_depends, *dep_preflight_completed]
-  limbo-data-migrate:
-    image: *image_limbo
-    labels: *managed_version_labels
-    pull_policy: always
-    command: ["/bin/sh", "/opt/limbo-preflight/migrate-limbo-data.sh"]
-    environment:
-      LIMBO_UID: *default_limbo_uid
-      LIMBO_GID: *default_limbo_gid
-      LIMBO_UMASK: *default_limbo_umask
-      LIMBO_WRITE_PATHS: "/metadata/limbo_data"
-    volumes:
       - ${LIMBO_LIMBO_DATA_SOURCE:-${LIMBO_DATA_ROOT:-limbo_data}${LIMBO_DATA_ROOT:+/limbo_data}}:/metadata/limbo_data
-    restart: "no"
-    depends_on:
-      <<: [*assets_depends, *dep_preflight_completed]
-  limbo-key-init:
-    image: *image_limbo
-    labels: *managed_version_labels
-    pull_policy: always
-    command: ["python3.14", "/opt/limbo-preflight/init-limbo-key.py"]
-    environment:
-      LIMBO_UID: *default_limbo_uid
-      LIMBO_GID: *default_limbo_gid
-      LIMBO_UMASK: *default_limbo_umask
-      LIMBO_WRITE_PATHS: "/metadata/limbo_data"
-    volumes:
-      - ${LIMBO_LIMBO_DATA_SOURCE:-${LIMBO_DATA_ROOT:-limbo_data}${LIMBO_DATA_ROOT:+/limbo_data}}:/metadata/limbo_data
-    restart: "no"
-    depends_on:
-      <<: [*assets_depends, *dep_limbo_data_migrate_completed]
-  limbo-musicbrainz-admin-seed:
-    image: *image_limbo
-    labels: *managed_version_labels
-    pull_policy: always
-    entrypoint: ["/bin/sh", "/opt/limbo-preflight/seed-musicbrainz-admin.sh"]
-    command: []
-    environment:
-      LIMBO_ADMIN_RUNTIME_DIR: "/opt/limbo-admin"
-    volumes:
       - limbo_admin:/opt/limbo-admin
     restart: "no"
     depends_on:
-      <<: [*assets_depends, *dep_limbo_key_init_completed]
+      <<:
+        [*assets_depends, *dep_db_started, *dep_bootstrap_completed]
   db:
     image: *image_db
     labels:
@@ -275,7 +198,7 @@ services:
     expose:
       - "${LIMBO_MBDB_PORT:-4818}"
     depends_on:
-      <<: [*assets_depends, *dep_preflight_completed]
+      <<: [*assets_depends]
   mq:
     image: *image_mq
     labels:
@@ -300,7 +223,7 @@ services:
     expose:
       - *default_limbo_mq_port
     depends_on:
-      <<: [*assets_depends, *dep_preflight_completed]
+      <<: [*assets_depends]
   redis:
     image: *image_redis
     labels:
@@ -320,7 +243,7 @@ services:
     expose:
       - "${LIMBO_REDIS_PORT}"
     depends_on:
-      <<: [*assets_depends, *dep_preflight_completed]
+      <<: [*assets_depends]
   bootstrap:
     image: *image_bootstrap
     labels: *managed_version_labels
@@ -336,27 +259,7 @@ services:
     command: ["bootstrap.sh"]
     restart: "no"
     depends_on:
-      <<: [*assets_depends, *dep_preflight_completed, *dep_db_started]
-  search-bootstrap:
-    image: *image_search
-    labels: *managed_version_labels
-    entrypoint: ["/usr/local/bin/bootstrap-indexes.sh"]
-    # Run bootstrap as root so permission self-repair in bootstrap-indexes.sh can
-    # fix bind-mounted solrdata/solrdump ownership on Unraid appdata paths.
-    user: "0:0"
-    env_file: *env_files_runtime
-    environment:
-      - TZ=${TZ:-UTC}
-    volumes:
-      - ${LIMBO_SOLRDATA_SOURCE:-${LIMBO_DATA_ROOT:-solrdata}${LIMBO_DATA_ROOT:+/solrdata}}:/var/solr
-      - ${LIMBO_SOLRDUMP_SOURCE:-${LIMBO_DATA_ROOT:-solrdump}${LIMBO_DATA_ROOT:+/solrdump}}:/var/cache/musicbrainz/solr-backups
-      - ${LIMBO_SOLRDUMP_SOURCE:-${LIMBO_DATA_ROOT:-solrdump}${LIMBO_DATA_ROOT:+/solrdump}}:/var/solr/solr-backups
-      - ${LIMBO_DBDUMP_SOURCE:-${LIMBO_DATA_ROOT:-dbdump}${LIMBO_DATA_ROOT:+/dbdump}}:/media/dbdump:ro
-    ulimits:
-      nofile: 65536
-    restart: "no"
-    depends_on:
-      <<: [*assets_depends, *dep_preflight_completed, *dep_bootstrap_completed]
+      <<: [*assets_depends, *dep_db_started]
   search:
     image: *image_search
     labels:
@@ -383,7 +286,7 @@ services:
       [
         "/bin/sh",
         "-lc",
-        "mkdir -p /var/solr/data /var/solr/logs /var/solr/solr-backups /var/cache/musicbrainz/solr-backups; chown -R 8983:8983 /var/solr /var/cache/musicbrainz/solr-backups 2>/dev/null || true; chmod -R u+rwX,g+rwX /var/solr /var/cache/musicbrainz/solr-backups 2>/dev/null || true; exec solr-foreground --cloud -p ${LIMBO_SOLR_PORT:-4817}",
+        "mkdir -p /var/solr/data /var/solr/logs /var/solr/solr-backups /var/cache/musicbrainz/solr-backups; chown -R 8983:8983 /var/solr /var/cache/musicbrainz/solr-backups 2>/dev/null || true; chmod -R u+rwX,g+rwX /var/solr /var/cache/musicbrainz/solr-backups 2>/dev/null || true; /usr/local/bin/bootstrap-indexes.sh; exec solr-foreground --cloud -p ${LIMBO_SOLR_PORT:-4817}",
       ]
     expose:
       - *default_limbo_solr_port
@@ -393,7 +296,7 @@ services:
       - ${LIMBO_SOLRDUMP_SOURCE:-${LIMBO_DATA_ROOT:-solrdump}${LIMBO_DATA_ROOT:+/solrdump}}:/var/cache/musicbrainz/solr-backups
       - ${LIMBO_SOLRDUMP_SOURCE:-${LIMBO_DATA_ROOT:-solrdump}${LIMBO_DATA_ROOT:+/solrdump}}:/var/solr/solr-backups
     depends_on:
-      <<: [*assets_depends, *dep_search_bootstrap_completed]
+      <<: [*assets_depends, *dep_bootstrap_completed]
   musicbrainz:
     image: *image_musicbrainz
     labels:
@@ -437,34 +340,13 @@ services:
       <<:
         [
           *assets_depends,
-          *dep_preflight_completed,
-          *dep_limbo_key_init_completed,
-          *dep_limbo_musicbrainz_admin_seed_completed,
+          *dep_limbo_system_init_completed,
           *dep_db_started,
           *dep_mq_started,
           *dep_search_started,
           *dep_redis_started,
           *dep_bootstrap_completed,
-          *dep_search_bootstrap_completed,
         ]
-  indexer:
-    image: *image_indexer
-    labels:
-      <<: *managed_version_labels
-      net.unraid.docker.managed: "composeman"
-      net.unraid.docker.icon: "http://[IP]:[PORT:4808]/assets/images/limbo-icon.png"
-      net.unraid.docker.shell: "/bin/sh"
-    environment: *env_list_pg_runtime
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "10"
-    volumes:
-      - ${LIMBO_DBDUMP_SOURCE:-${LIMBO_DATA_ROOT:-dbdump}${LIMBO_DATA_ROOT:+/dbdump}}:/media/dbdump
-    depends_on:
-      <<:
-        [*assets_depends, *dep_db_started, *dep_mq_started, *dep_search_started]
   indexer-cron:
     image: *image_indexer
     labels:
@@ -486,34 +368,15 @@ services:
     volumes:
       - ${LIMBO_DBDUMP_SOURCE:-${LIMBO_DATA_ROOT:-dbdump}${LIMBO_DATA_ROOT:+/dbdump}}:/media/dbdump
     user: "0:0"
-    command: ["/usr/local/bin/indexer-cron.sh"]
+    command:
+      [
+        "/bin/sh",
+        "-lc",
+        "/usr/local/bin/indexer-reindex.sh || true; exec /usr/local/bin/indexer-cron.sh",
+      ]
     restart: unless-stopped
     depends_on:
       <<: [*assets_depends, *dep_db_started, *dep_search_started]
-  limbo-init:
-    image: *image_limbo
-    labels: *managed_version_labels
-    pull_policy: always
-    command: ["/bin/bash", "/metadata/init/init-mbdb.sh"]
-    environment:
-      TZ: *default_tz
-      LIMBO_UID: *default_limbo_uid
-      LIMBO_GID: *default_limbo_gid
-      LIMBO_UMASK: *default_limbo_umask
-      LIMBO_WRITE_PATHS: "/metadata/limbo_data"
-      MB_DB_HOST: *default_mb_db_host
-      LIMBO_MBDB_PORT: *default_limbo_mbdb_port
-      MB_DB_USER: *default_mb_db_user
-      MB_DB_PASSWORD: *default_mb_db_password
-      LIMBO_MBDB_USER: *default_mb_db_user
-      LIMBO_MBDB_PASSWORD: *default_mb_db_password
-      MB_DB_NAME: *default_mb_db_name
-      LIMBO_CACHE_DB: *default_limbo_cache_db
-      LIMBO_CACHE_USER: *default_limbo_cache_user
-      LIMBO_CACHE_PASSWORD: *default_limbo_cache_password
-    restart: "no"
-    depends_on:
-      <<: [*assets_depends, *dep_db_started, *dep_bootstrap_completed]
   limbo-host-helper:
     image: *image_limbo
     labels:
@@ -606,7 +469,7 @@ services:
       POSTGRES_CACHE_HOST: *default_mb_db_host
       LIMBO_MBDB_PORT: *default_limbo_mbdb_port
       LIMBO_ADMIN_BASE_URL: "http://musicbrainz:${LIMBO_ADMIN_PORT}"
-      LIMBO_DEPLOY_VERSION: "1.9.420.1309"
+      LIMBO_DEPLOY_VERSION: "1.9.420.1310"
       LIMBO_VERSION_FILE: "/limbo/VERSION"
       LIMBO_STARTUP_LOCK_DIR: "/tmp/limbo-startup-locks"
       # --- MusicBrainz DB creds (set these to match your mirror) ---
@@ -620,8 +483,7 @@ services:
         [
           *assets_depends,
           *dep_limbo_host_helper_started,
-          *dep_limbo_init_completed,
-          *dep_limbo_key_init_completed,
+          *dep_limbo_system_init_completed,
           *dep_db_started,
           *dep_search_started,
           *dep_redis_started,
