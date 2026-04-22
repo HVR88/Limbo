@@ -1,4 +1,4 @@
-#   Limbo 1.9.421.1330
+#   Limbo 1.9.422.1331
 # Description: Deploy compose file with managed assets sync
 #
 # THIS FILE IS REGULARLY OVERWRITTEN: It can't be modified nor manually maintained - leave it alone
@@ -30,6 +30,9 @@ x-dependency-items:
   limbo_system_init_completed: &dep_limbo_system_init_completed
     limbo-system-init:
       condition: service_completed_successfully
+  limbo_started: &dep_limbo_started
+    limbo:
+      condition: service_started
 x-images:
   limbo: &image_limbo ${LIMBO_IMAGE:-espressomatic/limbo:${LIMBO_CHANNEL:-latest}}
   assets: &image_assets ${LIMBO_DOCKERHUB_NAMESPACE:-espressomatic}/${LIMBO_DOCKERHUB_REPO_PREFIX:-limbo}-assets:${LIMBO_CHANNEL:-latest}
@@ -89,7 +92,7 @@ x-env-lists:
     - *default_env_pg_password
 x-labels:
   managed_version: &managed_version_labels
-    com.limbo.publish.version: "1.9.421.1330"
+    com.limbo.publish.version: "1.9.422.1331"
 volumes:
   pgdata:
     driver: local
@@ -125,7 +128,7 @@ services:
       net.unraid.docker.shell: "/bin/sh"
     pull_policy: always
     environment:
-      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.421.1330
+      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.422.1331
     volumes:
       - ./:/out
     restart: "no"
@@ -438,7 +441,8 @@ services:
       - "${LIMBO_DLDR_API_PORT}:4812"
     volumes:
       - ${LIMBO_DLDR_DATA_SOURCE:-${LIMBO_DATA_ROOT:-dldr_data}${LIMBO_DATA_ROOT:+/dldr_data}}:/data
-    depends_on: *assets_depends
+    depends_on:
+      <<: [*assets_depends, *dep_limbo_started]
   limbo:
     image: *image_limbo
     labels:
@@ -483,7 +487,7 @@ services:
       POSTGRES_CACHE_HOST: *default_mb_db_host
       LIMBO_MBDB_PORT: *default_limbo_mbdb_port
       LIMBO_ADMIN_BASE_URL: "http://musicbrainz:${LIMBO_ADMIN_PORT}"
-      LIMBO_DEPLOY_VERSION: "1.9.421.1330"
+      LIMBO_DEPLOY_VERSION: "1.9.422.1331"
       LIMBO_VERSION_FILE: "/limbo/VERSION"
       LIMBO_STARTUP_LOCK_DIR: "/tmp/limbo-startup-locks"
       # --- MusicBrainz DB creds (set these to match your mirror) ---
@@ -497,8 +501,6 @@ services:
         [
           *assets_depends,
           *dep_limbo_host_helper_started,
-          *dep_limbo_system_init_completed,
           *dep_db_started,
-          *dep_search_started,
           *dep_redis_started,
         ]
