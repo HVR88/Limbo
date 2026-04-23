@@ -46,7 +46,7 @@ Other features are currently in development or testing. Update notifications are
 
 Linux Host:
 
-- Make sure you have curl and screen (or tmux) installed
+- Make sure you have _curl_ and _screen_ (or _tmux_) installed on your host
 
 ### 1. Register for MusicBrainz access & token
 
@@ -81,7 +81,7 @@ Configure this variable in the .env file:
 
 > [!TIP]
 >
-> When deploying from a terminal, use _screen_ or _tmux_ so the compose process can continue running if your session drops (closing the window, computer goes to sleep, etc.)
+> Use _screen_ or _tmux_ so the compose process can continue running if the terminal session drops, window closes, computer goes to sleep, etc.
 
 ```bash
 screen -S limbo-install
@@ -99,6 +99,18 @@ Close the terminal and monitor progress from Limbo: **http://LIMBO_HOST_IP:4808*
 ### 5. Install Limbo Stick next to Lidarr
 
 On your Lidarr host or Docker platform, install the Limbo Stick container next to Lidarr.
+
+```bash
+mkdir -p /opt/docker/limbo-stick
+cd /opt/docker/limbo-stick
+curl -fsSL -o limbostick-latest.zip https://github.com/HVR88/Limbo/releases/latest/download/limbostick-latest.zip
+unzip -o limbostick-latest.zip
+```
+
+```
+docker compose pull
+docker compose up -d
+```
 
 While Limbo itself can be installed on any host and doesn't need to be next to Lidarr, the special Limbo Stick container does. It's a helper that allows Limbo direct control over Lidarr's environment, to add theme support, built-in download buttons and the ability to start/stop/pause tasks.
 
