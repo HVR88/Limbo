@@ -1,4 +1,4 @@
-#   Limbo 1.9.422.1345
+#   Limbo 1.9.422.1346
 # Description: Deploy compose file with managed assets sync
 #
 # THIS FILE IS REGULARLY OVERWRITTEN: It can't be modified nor manually maintained - leave it alone
@@ -92,7 +92,7 @@ x-env-lists:
     - *default_env_pg_password
 x-labels:
   managed_version: &managed_version_labels
-    com.limbo.publish.version: "1.9.422.1345"
+    com.limbo.publish.version: "1.9.422.1346"
 volumes:
   pgdata:
     driver: local
@@ -128,7 +128,7 @@ services:
       net.unraid.docker.shell: "/bin/sh"
     pull_policy: always
     environment:
-      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.422.1345
+      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.422.1346
     volumes:
       - ./:/out
     restart: "no"
@@ -186,7 +186,7 @@ services:
       - ${LIMBO_LIMBO_DATA_SOURCE:-${LIMBO_DATA_ROOT:-limbo_data}${LIMBO_DATA_ROOT:+/limbo_data}}:/ownership/limbo_data
       - ${LIMBO_DLDR_DATA_SOURCE:-${LIMBO_DATA_ROOT:-dldr_data}${LIMBO_DATA_ROOT:+/dldr_data}}:/ownership/dldr_data
       - ${LIMBO_LIMBO_DATA_SOURCE:-${LIMBO_DATA_ROOT:-limbo_data}${LIMBO_DATA_ROOT:+/limbo_data}}:/metadata/limbo_data
-      - limbo_admin:/opt/limbo-admin
+      - ${LIMBO_ADMIN_SOURCE:-${LIMBO_DATA_ROOT:-limbo_admin}${LIMBO_DATA_ROOT:+/limbo_admin}}:/opt/limbo-admin
     restart: "no"
     depends_on:
       <<:
@@ -256,6 +256,8 @@ services:
     restart: unless-stopped
     expose:
       - "${LIMBO_REDIS_PORT}"
+    volumes:
+      - ${LIMBO_REDIS_SOURCE:-${LIMBO_DATA_ROOT:-redisdata}${LIMBO_DATA_ROOT:+/redisdata}}:/data
     depends_on:
       <<: [*assets_depends]
   bootstrap:
@@ -334,7 +336,7 @@ services:
       - ${LIMBO_DBDUMP_SOURCE:-${LIMBO_DATA_ROOT:-dbdump}${LIMBO_DATA_ROOT:+/dbdump}}:/media/dbdump
       - ${LIMBO_SOLRDUMP_SOURCE:-${LIMBO_DATA_ROOT:-solrdump}${LIMBO_DATA_ROOT:+/solrdump}}:/var/cache/musicbrainz/solr-backups:ro
       - ${LIMBO_LIMBO_DATA_SOURCE:-${LIMBO_DATA_ROOT:-limbo_data}${LIMBO_DATA_ROOT:+/limbo_data}}:/metadata/limbo_data:ro
-      - limbo_admin:/opt/limbo-admin:ro
+      - ${LIMBO_ADMIN_SOURCE:-${LIMBO_DATA_ROOT:-limbo_admin}${LIMBO_DATA_ROOT:+/limbo_admin}}:/opt/limbo-admin:ro
       - type: bind
         source: ./admin/.limbo/runtime
         target: /run/limbo-runtime
@@ -491,7 +493,7 @@ services:
       POSTGRES_CACHE_HOST: *default_mb_db_host
       LIMBO_MBDB_PORT: *default_limbo_mbdb_port
       LIMBO_ADMIN_BASE_URL: "http://musicbrainz:${LIMBO_ADMIN_PORT}"
-      LIMBO_DEPLOY_VERSION: "1.9.422.1345"
+      LIMBO_DEPLOY_VERSION: "1.9.422.1346"
       LIMBO_VERSION_FILE: "/limbo/VERSION"
       LIMBO_STARTUP_LOCK_DIR: "/tmp/limbo-startup-locks"
       # --- MusicBrainz DB creds (set these to match your mirror) ---
