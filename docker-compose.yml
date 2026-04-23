@@ -1,4 +1,4 @@
-#   Limbo 1.9.422.1343
+#   Limbo 1.9.423.1358
 # Description: Deploy compose file with managed assets sync
 #
 # THIS FILE IS REGULARLY OVERWRITTEN: It can't be modified nor manually maintained - leave it alone
@@ -92,7 +92,7 @@ x-env-lists:
     - *default_env_pg_password
 x-labels:
   managed_version: &managed_version_labels
-    com.limbo.publish.version: "1.9.422.1343"
+    com.limbo.publish.version: "1.9.423.1358"
 volumes:
   pgdata:
     driver: local
@@ -106,9 +106,6 @@ volumes:
     driver: local
   limbo_data:
     name: limbo_data
-    driver: local
-  limbo_admin:
-    name: limbo_admin
     driver: local
   dldr_data:
     driver: local
@@ -128,7 +125,7 @@ services:
       net.unraid.docker.shell: "/bin/sh"
     pull_policy: always
     environment:
-      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.422.1343
+      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.423.1358
     volumes:
       - ./:/out
     restart: "no"
@@ -164,6 +161,10 @@ services:
       LIMBO_MQDATA_GID: "${LIMBO_MQDATA_GID:-999}"
       LIMBO_SOLRDATA_UID: "${LIMBO_SOLRDATA_UID:-8983}"
       LIMBO_SOLRDATA_GID: "${LIMBO_SOLRDATA_GID:-8983}"
+      LIMBO_REDISDATA_UID: "${LIMBO_REDISDATA_UID:-100}"
+      LIMBO_REDISDATA_GID: "${LIMBO_REDISDATA_GID:-100}"
+      LIMBO_ADMIN_UID: "${LIMBO_ADMIN_UID:-${LIMBO_UID:-${PUID:-99}}}"
+      LIMBO_ADMIN_GID: "${LIMBO_ADMIN_GID:-${LIMBO_GID:-${PGID:-100}}}"
       LIMBO_ADMIN_RUNTIME_DIR: "/opt/limbo-admin"
       MB_DB_HOST: *default_mb_db_host
       LIMBO_MBDB_PORT: *default_limbo_mbdb_port
@@ -185,8 +186,10 @@ services:
       - ${LIMBO_DBDUMP_SOURCE:-${LIMBO_DATA_ROOT:-dbdump}${LIMBO_DATA_ROOT:+/dbdump}}:/ownership/dbdump
       - ${LIMBO_LIMBO_DATA_SOURCE:-${LIMBO_DATA_ROOT:-limbo_data}${LIMBO_DATA_ROOT:+/limbo_data}}:/ownership/limbo_data
       - ${LIMBO_DLDR_DATA_SOURCE:-${LIMBO_DATA_ROOT:-dldr_data}${LIMBO_DATA_ROOT:+/dldr_data}}:/ownership/dldr_data
+      - ${LIMBO_REDIS_SOURCE:-${LIMBO_DATA_ROOT:-redisdata}${LIMBO_DATA_ROOT:+/redisdata}}:/ownership/redisdata
+      - ${LIMBO_ADMIN_SOURCE:-${LIMBO_DATA_ROOT:-limbo_admin}${LIMBO_DATA_ROOT:+/limbo_admin}}:/ownership/limbo_admin
       - ${LIMBO_LIMBO_DATA_SOURCE:-${LIMBO_DATA_ROOT:-limbo_data}${LIMBO_DATA_ROOT:+/limbo_data}}:/metadata/limbo_data
-      - limbo_admin:/opt/limbo-admin
+      - ${LIMBO_ADMIN_SOURCE:-${LIMBO_DATA_ROOT:-limbo_admin}${LIMBO_DATA_ROOT:+/limbo_admin}}:/opt/limbo-admin
     restart: "no"
     depends_on:
       <<:
@@ -256,6 +259,8 @@ services:
     restart: unless-stopped
     expose:
       - "${LIMBO_REDIS_PORT}"
+    volumes:
+      - ${LIMBO_REDIS_SOURCE:-${LIMBO_DATA_ROOT:-redisdata}${LIMBO_DATA_ROOT:+/redisdata}}:/data
     depends_on:
       <<: [*assets_depends]
   bootstrap:
@@ -334,7 +339,7 @@ services:
       - ${LIMBO_DBDUMP_SOURCE:-${LIMBO_DATA_ROOT:-dbdump}${LIMBO_DATA_ROOT:+/dbdump}}:/media/dbdump
       - ${LIMBO_SOLRDUMP_SOURCE:-${LIMBO_DATA_ROOT:-solrdump}${LIMBO_DATA_ROOT:+/solrdump}}:/var/cache/musicbrainz/solr-backups:ro
       - ${LIMBO_LIMBO_DATA_SOURCE:-${LIMBO_DATA_ROOT:-limbo_data}${LIMBO_DATA_ROOT:+/limbo_data}}:/metadata/limbo_data:ro
-      - limbo_admin:/opt/limbo-admin:ro
+      - ${LIMBO_ADMIN_SOURCE:-${LIMBO_DATA_ROOT:-limbo_admin}${LIMBO_DATA_ROOT:+/limbo_admin}}:/opt/limbo-admin:ro
       - type: bind
         source: ./admin/.limbo/runtime
         target: /run/limbo-runtime
@@ -462,6 +467,7 @@ services:
     volumes:
       - ${LIMBO_LIMBO_DATA_SOURCE:-${LIMBO_DATA_ROOT:-limbo_data}${LIMBO_DATA_ROOT:+/limbo_data}}:/metadata/limbo_data
       - ${LIMBO_DBDUMP_SOURCE:-${LIMBO_DATA_ROOT:-dbdump}${LIMBO_DATA_ROOT:+/dbdump}}:/media/dbdump:ro
+      - ${LIMBO_SOLRDUMP_SOURCE:-${LIMBO_DATA_ROOT:-solrdump}${LIMBO_DATA_ROOT:+/solrdump}}:/var/cache/musicbrainz/solr-backups:ro
       - ./admin/.limbo/assets/LIMBO_TAG_VERSION:/limbo/VERSION:ro
       - /var/run/docker.sock:/var/run/docker.sock
       - type: bind
@@ -490,9 +496,17 @@ services:
       POSTGRES_CACHE_HOST: *default_mb_db_host
       LIMBO_MBDB_PORT: *default_limbo_mbdb_port
       LIMBO_ADMIN_BASE_URL: "http://musicbrainz:${LIMBO_ADMIN_PORT}"
-      LIMBO_DEPLOY_VERSION: "1.9.422.1343"
+      LIMBO_DEPLOY_VERSION: "1.9.423.1358"
       LIMBO_VERSION_FILE: "/limbo/VERSION"
       LIMBO_STARTUP_LOCK_DIR: "/tmp/limbo-startup-locks"
+      LIMBO_GUNICORN_TIMEOUT_SECONDS: "${LIMBO_GUNICORN_TIMEOUT_SECONDS:-300}"
+      LIMBO_GUNICORN_GRACEFUL_TIMEOUT_SECONDS: "${LIMBO_GUNICORN_GRACEFUL_TIMEOUT_SECONDS:-90}"
+      LIMBO_GUNICORN_MAX_REQUESTS: "${LIMBO_GUNICORN_MAX_REQUESTS:-1000}"
+      LIMBO_GUNICORN_MAX_REQUESTS_JITTER: "${LIMBO_GUNICORN_MAX_REQUESTS_JITTER:-250}"
+      LIMBO_MB_WEB_STARTUP_TASK_TIMEOUT_SECONDS: "${LIMBO_MB_WEB_STARTUP_TASK_TIMEOUT_SECONDS:-45}"
+      LIMBO_MB_WEB_STARTUP_RECONCILE_TIMEOUT_SECONDS: "${LIMBO_MB_WEB_STARTUP_RECONCILE_TIMEOUT_SECONDS:-4}"
+      LIMBO_MB_WEB_STARTUP_STATUS_PROBE_TIMEOUT_SECONDS: "${LIMBO_MB_WEB_STARTUP_STATUS_PROBE_TIMEOUT_SECONDS:-2}"
+      LIMBO_MB_WEB_STARTUP_RECONCILE_MAX_ATTEMPTS: "${LIMBO_MB_WEB_STARTUP_RECONCILE_MAX_ATTEMPTS:-4}"
       # --- MusicBrainz DB creds (set these to match your mirror) ---
       PROVIDERS__MUSICBRAINZDBPROVIDER__1__DB_HOST: *default_mb_db_host
       PROVIDERS__MUSICBRAINZDBPROVIDER__1__DB_PORT: *default_mb_db_port
