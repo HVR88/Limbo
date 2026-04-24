@@ -1,0 +1,28 @@
+# THIS FILE IS MANAGED: Edit defaults in .env instead, and don't edit here
+services:
+  limbo-stick:
+    image: espressomatic/limbo-stick:${LIMBOSTICK_CHANNEL:-latest}
+    container_name: limbo-stick
+    restart: unless-stopped
+    network_mode: host
+    labels:
+      net.unraid.docker.managed: "composeman"
+      net.unraid.docker.icon: "https://raw.githubusercontent.com/espressomatic/Limbo-Stack/integration/services/Limbo-Stick-Sidecar/images/limbo-stick-logo.svg"
+      net.unraid.docker.webui: "http://[IP]:[PORT:4810]/"
+      net.unraid.docker.shell: "/bin/sh"
+    environment:
+      LIMBO_STICK_DB_TYPE: "${LIMBO_STICK_DB_TYPE:-}"
+      LIMBO_STICK_DB_SQLITE_PATH: "${LIMBO_STICK_DB_SQLITE_PATH:-}"
+      LIMBO_STICK_DB_POSTGRES_URL: "${LIMBO_STICK_DB_POSTGRES_URL:-}"
+      LIMBO_STICK_DB_POSTGRES_HOST: "${LIMBO_STICK_DB_POSTGRES_HOST:-}"
+      LIMBO_STICK_DB_POSTGRES_PORT: "${LIMBO_STICK_DB_POSTGRES_PORT:-}"
+      LIMBO_STICK_DB_POSTGRES_USER: "${LIMBO_STICK_DB_POSTGRES_USER:-}"
+      LIMBO_STICK_DB_POSTGRES_PASSWORD: "${LIMBO_STICK_DB_POSTGRES_PASSWORD:-}"
+      LIMBO_STICK_DB_POSTGRES_DB: "${LIMBO_STICK_DB_POSTGRES_DB:-}"
+      LIMBO_STICK_LIDARR_CONFIG_XML: "${LIMBO_STICK_LIDARR_CONFIG_XML:-}"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${LIMBOSTICK_DATA_ROOT:-limbo_stick_config}${LIMBOSTICK_DATA_ROOT:+/limbo-stick/lidarr-config}:/config
+
+volumes:
+  limbo_stick_config:
