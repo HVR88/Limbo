@@ -20,6 +20,7 @@ services:
       LIMBO_STICK_DB_POSTGRES_PASSWORD: "${LIMBO_STICK_DB_POSTGRES_PASSWORD:-}"
       LIMBO_STICK_DB_POSTGRES_DB: "${LIMBO_STICK_DB_POSTGRES_DB:-}"
       LIMBO_STICK_LIDARR_CONFIG_XML: "${LIMBO_STICK_LIDARR_CONFIG_XML:-}"
+      LIMBO_STICK_PROXY_READ_TIMEOUT_SECONDS: "${LIMBO_STICK_PROXY_READ_TIMEOUT_SECONDS:-}"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${LIMBOSTICK_LIDARR_CONFIG_ROOT:-/opt/docker/lidarr/volumes/lidarrconfig}:/config
