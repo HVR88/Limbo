@@ -1,4 +1,4 @@
-#   Limbo 1.9.917.8820
+#   Limbo 1.9.918.8840
 # Description: Deploy compose file with managed assets sync
 #
 # THIS FILE IS REGULARLY OVERWRITTEN: It can't be modified nor manually maintained - leave it alone
@@ -90,7 +90,7 @@ x-env-lists:
     - "LIMBO_POSTGRES_MIGRATION_MODE=${LIMBO_POSTGRES_MIGRATION_MODE:-0}"
 x-labels:
   managed_version: &managed_version_labels
-    com.limbo.publish.version: "1.9.917.8820"
+    com.limbo.publish.version: "1.9.918.8840"
 volumes:
   pgdata:
     driver: local
@@ -125,7 +125,7 @@ services:
       net.unraid.docker.shell: "/bin/sh"
     pull_policy: always
     environment:
-      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.917.8820
+      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.918.8840
       - LIMBO_PGHOME=/var/lib/postgresql
     volumes:
       - ./:/out
@@ -219,6 +219,14 @@ services:
       - "${LIMBO_MBDB_PORT:-4818}"
     depends_on:
       <<: [*assets_depends]
+  db-upgrade:
+    image: *image_db_upgrade
+    pull_policy: always
+    network_mode: none
+    command: ["/bin/sleep", "infinity"]
+    deploy:
+      replicas: 0
+    restart: "no"
   redis:
     image: *image_redis
     labels:
@@ -493,7 +501,7 @@ services:
       POSTGRES_CACHE_HOST: *default_mb_db_host
       LIMBO_MBDB_PORT: *default_limbo_mbdb_port
       LIMBO_ADMIN_BASE_URL: "http://musicbrainz:${LIMBO_ADMIN_PORT}"
-      LIMBO_DEPLOY_VERSION: "1.9.917.8820"
+      LIMBO_DEPLOY_VERSION: "1.9.918.8840"
       LIMBO_VERSION_FILE: "/limbo/VERSION"
       LIMBO_DB_UPGRADE_IMAGE: *image_db_upgrade
       LIMBO_POSTGRES_DEPLOY_MOUNT: "/limbo/deploy"
