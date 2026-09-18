@@ -6,7 +6,7 @@
 
 ## Introduction
 
-Limbo is a set of tools, downloader and data server for Lidarr music manager. It contains a full MusicBrainz mirror with automated installation. When Limbo Stick helper is installed next to Lidarr settings are auto-discovered for quick and easy setup - no URLs, API keys or ports to edit. Start using Limbo right away.
+Limbo is a web-based toolset, downloader and data server for Lidarr music manager, including a full MusicBrainz mirror. _Install Limbo Stick helper for quick and easy setup - no URLs, API keys or ports to edit. Start using Limbo right away._
 
 **Currently implemented features:**
 
