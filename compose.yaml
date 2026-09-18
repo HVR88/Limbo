@@ -1,4 +1,4 @@
-#   Limbo 1.9.917.8800
+#   Limbo 1.9.917.8810
 # Description: Deploy compose file with managed assets sync
 #
 # THIS FILE IS REGULARLY OVERWRITTEN: It can't be modified nor manually maintained - leave it alone
@@ -90,7 +90,7 @@ x-env-lists:
     - "LIMBO_POSTGRES_MIGRATION_MODE=${LIMBO_POSTGRES_MIGRATION_MODE:-0}"
 x-labels:
   managed_version: &managed_version_labels
-    com.limbo.publish.version: "1.9.917.8800"
+    com.limbo.publish.version: "1.9.917.8810"
 volumes:
   pgdata:
     driver: local
@@ -125,7 +125,7 @@ services:
       net.unraid.docker.shell: "/bin/sh"
     pull_policy: always
     environment:
-      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.917.8800
+      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.917.8810
       - LIMBO_PGHOME=/var/lib/postgresql
     volumes:
       - ./:/out
@@ -143,6 +143,7 @@ services:
     env_file: *env_files_runtime
     command:
       [
+        "/limbo/deploy-admin/run-unless-postgres18-migration-required",
         "/bin/sh",
         "-lc",
         "/bin/sh /opt/limbo-preflight/core-env.sh && python3.14 /opt/limbo-preflight/init-limbo-key.py && /bin/sh /opt/limbo-preflight/seed-musicbrainz-admin.sh && /bin/bash /metadata/init/init-mbdb.sh",
@@ -166,6 +167,7 @@ services:
       LIMBO_ADMIN_UID: "${LIMBO_ADMIN_UID:-${LIMBO_UID:-${PUID:-99}}}"
       LIMBO_ADMIN_GID: "${LIMBO_ADMIN_GID:-${LIMBO_GID:-${PGID:-100}}}"
       LIMBO_ADMIN_RUNTIME_DIR: "/opt/limbo-admin"
+      LIMBO_PGHOME: "/var/lib/postgresql"
       MB_DB_HOST: *default_mb_db_host
       LIMBO_MBDB_PORT: *default_limbo_mbdb_port
       MB_DB_USER: *default_mb_db_user
@@ -178,7 +180,9 @@ services:
       LIMBO_CACHE_PASSWORD: *default_limbo_cache_password
     volumes:
       - ./.env:/run/limbo.env:ro
+      - ./admin:/limbo/deploy-admin:ro
       - /var/run/docker.sock:/var/run/docker.sock
+      - ${LIMBO_PGDATA_SOURCE:-${LIMBO_DATA_ROOT:-pgdata}${LIMBO_DATA_ROOT:+/pgdata}}:/var/lib/postgresql:ro
       - ${LIMBO_PGDATA_SOURCE:-${LIMBO_DATA_ROOT:-pgdata}${LIMBO_DATA_ROOT:+/pgdata}}:/ownership/pgdata
       - ${LIMBO_SOLRDATA_SOURCE:-${LIMBO_DATA_ROOT:-solrdata}${LIMBO_DATA_ROOT:+/solrdata}}:/ownership/solrdata
       - ${LIMBO_SOLRDUMP_SOURCE:-${LIMBO_DATA_ROOT:-solrdump}${LIMBO_DATA_ROOT:+/solrdump}}:/ownership/solrdump
@@ -251,9 +255,16 @@ services:
       - *default_env_mbdb_port
       - *default_env_pg_user
       - *default_env_pg_password
+      - LIMBO_PGHOME=/var/lib/postgresql
     volumes:
       - ${LIMBO_DBDUMP_SOURCE:-${LIMBO_DATA_ROOT:-dbdump}${LIMBO_DATA_ROOT:+/dbdump}}:/media/dbdump
-    command: ["bootstrap.sh"]
+      - ${LIMBO_PGDATA_SOURCE:-${LIMBO_DATA_ROOT:-pgdata}${LIMBO_DATA_ROOT:+/pgdata}}:/var/lib/postgresql:ro
+      - ./admin:/limbo/deploy-admin:ro
+    command:
+      [
+        "/limbo/deploy-admin/run-unless-postgres18-migration-required",
+        "bootstrap.sh",
+      ]
     restart: "no"
     depends_on:
       <<: [*assets_depends, *dep_db_started]
@@ -482,7 +493,7 @@ services:
       POSTGRES_CACHE_HOST: *default_mb_db_host
       LIMBO_MBDB_PORT: *default_limbo_mbdb_port
       LIMBO_ADMIN_BASE_URL: "http://musicbrainz:${LIMBO_ADMIN_PORT}"
-      LIMBO_DEPLOY_VERSION: "1.9.917.8800"
+      LIMBO_DEPLOY_VERSION: "1.9.917.8810"
       LIMBO_VERSION_FILE: "/limbo/VERSION"
       LIMBO_DB_UPGRADE_IMAGE: *image_db_upgrade
       LIMBO_POSTGRES_DEPLOY_MOUNT: "/limbo/deploy"
