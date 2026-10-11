@@ -1,4 +1,4 @@
-#   Limbo 1.9.1010.8995
+#   Limbo 1.9.1010.8999
 # Description: Deploy compose file with managed assets sync
 #
 # THIS FILE IS REGULARLY OVERWRITTEN: It can't be modified nor manually maintained - leave it alone
@@ -90,7 +90,7 @@ x-env-lists:
     - "LIMBO_POSTGRES_MIGRATION_MODE=${LIMBO_POSTGRES_MIGRATION_MODE:-0}"
 x-labels:
   managed_version: &managed_version_labels
-    com.limbo.publish.version: "1.9.1010.8995"
+    com.limbo.publish.version: "1.9.1010.8999"
 volumes:
   pgdata:
     driver: local
@@ -125,7 +125,7 @@ services:
       net.unraid.docker.shell: "/bin/sh"
     pull_policy: always
     environment:
-      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.1010.8995
+      - LIMBO_ASSETS_DEPLOY_VERSION=1.9.1010.8999
       - LIMBO_PGHOME=/var/lib/postgresql
     volumes:
       - ./:/out
@@ -438,14 +438,23 @@ services:
     pull_policy: always
     hostname: limbo-dldr
     restart: unless-stopped
-    command: ["${DLDR_COMMAND:-/app/scripts/DLDR-start.core.sh}"]
+    command: ["${DLDR_COMMAND:-/app/scripts/dldr-stack.sh}"]
+    # Mount executor: DLDR mounts Limbo-managed volumes in its own namespace.
+    cap_add:
+      - SYS_ADMIN
+      - DAC_READ_SEARCH
     environment:
       LIMBO_UID: *default_limbo_uid
       LIMBO_GID: *default_limbo_gid
       LIMBO_UMASK: *default_limbo_umask
       LIMBO_WRITE_PATHS: "/data"
+      LIMBO_PORT: *default_limbo_port
+      LIMBO_DLDR_SOULSEEK_PORT: "${LIMBO_DLDR_SOULSEEK_PORT:-50300}"
+      DLDR_INTEGRATION: "lidarr"
+      DLDR_STARTUP_STATE_PATH: "/data/startup.state"
     ports:
       - "${LIMBO_DLDR_API_PORT}:4812"
+      - "${LIMBO_DLDR_SOULSEEK_PORT:-50300}:${LIMBO_DLDR_SOULSEEK_PORT:-50300}"
     volumes:
       - ${LIMBO_DLDR_DATA_SOURCE:-${LIMBO_DATA_ROOT:-dldr_data}${LIMBO_DATA_ROOT:+/dldr_data}}:/data
     depends_on:
@@ -503,7 +512,7 @@ services:
       POSTGRES_CACHE_HOST: *default_mb_db_host
       LIMBO_MBDB_PORT: *default_limbo_mbdb_port
       LIMBO_ADMIN_BASE_URL: "http://musicbrainz:${LIMBO_ADMIN_PORT}"
-      LIMBO_DEPLOY_VERSION: "1.9.1010.8995"
+      LIMBO_DEPLOY_VERSION: "1.9.1010.8999"
       LIMBO_VERSION_FILE: "/limbo/VERSION"
       LIMBO_DB_UPGRADE_IMAGE: *image_db_upgrade
       LIMBO_POSTGRES_DEPLOY_MOUNT: "/limbo/deploy"
